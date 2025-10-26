@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo nhân vật</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <form id="create-character-form">
+            <h2>Tạo nhân vật</h2>
+            <input type="text" id="character-name" placeholder="Tên nhân vật" required>
+            <label for="character-image">Chọn ảnh đại diện:</label>
+            <input type="file" id="character-image" accept="image/*" required>
+            <div class="character-preview">
+                <div class="character-circle">
+                    <img id="preview-image" src="#" alt="Xem trước nhân vật">
+                </div>
+            </div>
+            <button type="submit">Xác nhận</button>
+        </form>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

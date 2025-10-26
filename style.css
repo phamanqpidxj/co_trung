@@ -1,0 +1,124 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+.container {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+input {
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.character-preview {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.character-circle {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed #ccc;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+#preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+
+#game-container {
+    width: 800px;
+    height: 600px;
+    border: 1px solid black;
+    position: relative;
+    background-color: #a0d4a0; /* Light green grass */
+    overflow: hidden;
+}
+
+#character {
+    width: 50px;
+    height: 50px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.terrain {
+    position: absolute;
+}
+
+.tree {
+    width: 60px;
+    height: 80px;
+    background-color: #228B22; /* ForestGreen */
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.tree:nth-of-type(1) { top: 100px; left: 150px; }
+.tree:nth-of-type(2) { top: 400px; left: 600px; }
+.tree:nth-of-type(3) { top: 250px; left: 50px; }
+
+.rock {
+    width: 70px;
+    height: 50px;
+    background-color: #A9A9A9; /* DarkGray */
+    border-radius: 10px;
+    top: 500px;
+    left: 200px;
+}
+
+.water {
+    width: 250px;
+    height: 120px;
+    background-color: #4682B4; /* SteelBlue */
+    border-radius: 30%;
+    top: 50px;
+    left: 400px;
+}
