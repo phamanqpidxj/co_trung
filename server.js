@@ -96,12 +96,43 @@ io.on('connection', (socket) => {
 
     // Listen for map saving
     socket.on('save map', (newMapLayout) => {
-        mapLayout = newMapLayout;
-        fs.writeFile(mapFilePath, JSON.stringify(mapLayout, null, 2), (err) => {
-            if (err) console.error('Failed to save map file:', err);
-            else console.log('Map layout saved successfully.');
-        });
-        io.emit('load map', mapLayout);
+        if (players[socket.id] && (players[socket.id].role === 'admin' || players[socket.id].role === 'moderator')) {
+            mapLayout = newMapLayout;
+            fs.writeFile(mapFilePath, JSON.stringify(mapLayout, null, 2), (err) => {
+                if (err) console.error('Failed to save map file:', err);
+                else console.log('Map layout saved successfully.');
+            });
+            io.emit('load map', mapLayout);
+        }
+    });
+
+    // Listen for role changes
+    socket.on('change role', (data) => {
+        if (players[socket.id] && players[socket.id].role === 'admin') {
+            const targetPlayer = Object.values(players).find(p => p.id === data.targetId);
+            if (targetPlayer) {
+                targetPlayer.role = data.newRole;
+                io.emit('role changed', {
+                    playerId: data.targetId,
+                    newRole: data.newRole
+                });
+                io.emit('update member list', Object.values(players));
+            }
+        }
+    });
+
+    // Listen for object deletion
+    socket.on('delete object', (objectData) => {
+        if (players[socket.id] && (players[socket.id].role === 'admin' || players[socket.id].role === 'moderator')) {
+            if (mapLayout.objects) {
+                mapLayout.objects = mapLayout.objects.filter(obj => obj.src !== objectData.src);
+                fs.writeFile(mapFilePath, JSON.stringify(mapLayout, null, 2), (err) => {
+                    if (err) console.error('Failed to save map file after deletion:', err);
+                    else console.log('Map layout saved after object deletion.');
+                });
+                io.emit('load map', mapLayout);
+            }
+        }
     });
 
     // Listen for disconnection

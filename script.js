@@ -125,7 +125,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const member of memberList) {
                     const li = document.createElement('li');
                     li.textContent = `${member.name} (${member.role})`;
+
+                    if (role === 'admin' && member.id !== socket.id) {
+                        const roleSelect = document.createElement('select');
+                        roleSelect.innerHTML = `
+                            <option value="user" ${member.role === 'user' ? 'selected' : ''}>User</option>
+                            <option value="moderator" ${member.role === 'moderator' ? 'selected' : ''}>Moderator</option>
+                            <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>
+                        `;
+                        roleSelect.addEventListener('change', (e) => {
+                            socket.emit('change role', { targetId: member.id, newRole: e.target.value });
+                        });
+                        li.appendChild(roleSelect);
+                    }
                     memberListElement.appendChild(li);
+                }
+            });
+
+            socket.on('role changed', (data) => {
+                if (players[data.playerId]) {
+                    players[data.playerId].role = data.newRole;
+                }
+                if (socket.id === data.playerId) {
+                    localStorage.setItem('role', data.newRole);
+                    // Reload the page to apply new permissions
+                    window.location.reload();
                 }
             });
 
@@ -288,9 +312,11 @@ document.addEventListener('DOMContentLoaded', () => {
         makeDraggable(document.getElementById('game-ui'));
         makeDraggable(document.getElementById('member-list-container'));
 
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'moderator') {
             const adminTools = document.getElementById('admin-tools');
-            makeDraggable(adminTools);
+            if (role === 'admin') {
+                makeDraggable(adminTools);
+            }
 
             document.getElementById('terrain-color-input').addEventListener('input', (e) => {
                 gameContainer.style.backgroundColor = e.target.value;
@@ -307,13 +333,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('save-map-button').addEventListener('click', saveMap);
 
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Delete' && selectedObject) {
-                    selectedObject.remove();
-                    mapObjects = mapObjects.filter(obj => obj.element !== selectedObject);
-                    selectedObject = null;
+            document.getElementById('delete-object-button').addEventListener('click', () => {
+                if (selectedObject) {
+                    const objectData = mapObjects.find(obj => obj.element === selectedObject);
+                    if (objectData) {
+                        if (isMultiplayer) {
+                            socket.emit('delete object', { src: objectData.data.src });
+                        } else {
+                            selectedObject.remove();
+                            mapObjects = mapObjects.filter(obj => obj.element !== selectedObject);
+                            deselectObject();
+                        }
+                    }
                 }
             });
+
+            if (role === 'admin') {
+                document.getElementById('delete-embed-button').addEventListener('click', () => {
+                    document.getElementById('embed-code-input').value = '';
+                    saveMap();
+                });
+            }
         }
 
         if (isMultiplayer) {
@@ -359,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const objectData = { src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
             mapObjects.push({ element: img, data: objectData });
 
-            if (role === 'admin') makeDraggable(img);
+            if (role === 'admin' || role === 'moderator') makeDraggable(img);
         }
 
         function makeDraggable(element) {
@@ -457,6 +497,33 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Bản đồ đã được lưu!');
         }
 
+        function setEmbedContent(container, htmlContent) {
+            container.innerHTML = ''; // Clear previous content
+            if (!htmlContent) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            const template = document.createElement('template');
+            template.innerHTML = htmlContent;
+
+            Array.from(template.content.childNodes).forEach(node => {
+                if (node.nodeName === 'SCRIPT') {
+                    const script = document.createElement('script');
+                    script.src = node.src;
+                    script.async = true;
+                    // Copy other attributes if necessary
+                    if(node.hasAttribute('data-video-id')) {
+                        script.setAttribute('data-video-id', node.getAttribute('data-video-id'));
+                    }
+                    document.body.appendChild(script); // Append to body to ensure execution
+                } else {
+                    container.appendChild(node.cloneNode(true));
+                }
+            });
+        }
+
         function loadMap(mapLayout) {
             mapObjects.forEach(obj => obj.element.remove());
             mapObjects = [];
@@ -465,13 +532,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (mapLayout.objects) mapLayout.objects.forEach(createMapObject);
 
                 const embedContainer = document.getElementById('embed-container');
-                if (role === 'admin' && mapLayout.embedCode) {
-                    embedContainer.innerHTML = mapLayout.embedCode;
-                    embedContainer.style.display = 'block';
-                    document.getElementById('embed-code-input').value = mapLayout.embedCode;
-                } else {
-                    embedContainer.innerHTML = '';
-                    embedContainer.style.display = 'none';
+                setEmbedContent(embedContainer, mapLayout.embedCode);
+
+                if (role === 'admin') {
+                    document.getElementById('embed-code-input').value = mapLayout.embedCode || '';
                 }
             }
         }
@@ -484,13 +548,33 @@ document.addEventListener('DOMContentLoaded', () => {
         function setupOnlineMode() {
             const chatContainer = document.getElementById('chat-container');
             if (chatContainer) chatContainer.style.display = 'flex';
-            if (role === 'admin') document.getElementById('admin-tools').style.display = 'block';
+
+            const adminTools = document.getElementById('admin-tools');
+            if (role === 'admin' || role === 'moderator') {
+                adminTools.style.display = 'block';
+                // Hide embed functionality for moderators
+                if (role === 'moderator') {
+                    adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
+                    adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
+                    adminTools.querySelector('button#delete-embed-button').style.display = 'none';
+                }
+            }
         }
 
         function setupOfflineMode() {
             const chatContainer = document.getElementById('chat-container');
             if (chatContainer) chatContainer.style.display = 'none';
-            if (role === 'admin') document.getElementById('admin-tools').style.display = 'block';
+
+            const adminTools = document.getElementById('admin-tools');
+            if (role === 'admin' || role === 'moderator') {
+                adminTools.style.display = 'block';
+                // Hide embed functionality for moderators
+                if (role === 'moderator') {
+                    adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
+                    adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
+                    adminTools.querySelector('button#delete-embed-button').style.display = 'none';
+                }
+            }
             loadMapFromLocalStorage();
         }
 
