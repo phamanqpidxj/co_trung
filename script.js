@@ -357,11 +357,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isMultiplayer) {
+            function sanitizeHTML(str) {
+                const temp = document.createElement('div');
+                temp.textContent = str;
+                return temp.innerHTML;
+            }
+
             document.getElementById('chat-form').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const chatInput = document.getElementById('chat-input');
                 if (chatInput.value) {
-                    socket.emit('chat message', chatInput.value);
+                    const sanitizedMessage = sanitizeHTML(chatInput.value);
+                    socket.emit('chat message', sanitizedMessage);
                     chatInput.value = '';
                 }
             });
