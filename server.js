@@ -69,19 +69,31 @@ io.on('connection', (socket) => {
     socket.on('change zone', (newZone) => {
         if (!zones.includes(newZone) || !players[socket.id]) return;
 
-        const oldZone = players[socket.id].zone;
+        const player = players[socket.id];
+        const oldZone = player.zone;
+
+        // Leave old zone and notify players
         socket.leave(oldZone);
-        io.in(oldZone).emit('player disconnected', socket.id);
-        io.in(oldZone).emit('update member list', getPlayersInZone(oldZone));
+        io.to(oldZone).emit('player disconnected', socket.id);
 
+        // Update player's state for the new zone
+        player.zone = newZone;
+        player.x = 800; // Reset to center X
+        player.y = 450; // Reset to center Y
+
+        // Join new zone
         socket.join(newZone);
-        players[socket.id].zone = newZone;
 
+        // Send the new map and the full list of players in the new zone
         socket.emit('load map', mapLayouts[newZone]);
         socket.emit('current players', getPlayersInZone(newZone));
 
-        socket.to(newZone).emit('new player connected', players[socket.id]);
-        io.in(newZone).emit('update member list', getPlayersInZone(newZone));
+        // Notify other players in the new zone that this player has connected
+        socket.to(newZone).emit('new player connected', player);
+
+        // Update member lists for all players in both old and new zones
+        io.to(oldZone).emit('update member list', getPlayersInZone(oldZone));
+        io.to(newZone).emit('update member list', getPlayersInZone(newZone));
     });
 
 

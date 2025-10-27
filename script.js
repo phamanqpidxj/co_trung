@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function gameLoop() {
-            if (!character || isZoneChangeInProgress) {
+            if (!character) {
                 requestAnimationFrame(gameLoop);
                 return;
             }
@@ -258,82 +258,58 @@ document.addEventListener('DOMContentLoaded', () => {
             if (moved) {
                 const charSize = 50;
                 const gameRect = gameContainer.getBoundingClientRect();
+                const threshold = 10;
 
-                // Temporary position for collision check, clamped to boundaries
-                let tempX = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
-                let tempY = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
+                let targetZone = null;
+                if (newPos.y <= threshold) targetZone = 'bac';
+                else if (newPos.y >= gameRect.height - charSize - threshold) targetZone = 'nam';
+                else if (newPos.x <= threshold) targetZone = 'tay';
+                else if (newPos.x >= gameRect.width - charSize - threshold) targetZone = 'dong';
 
-                let collision = false;
-                const playerRect = { x: tempX, y: tempY, width: charSize, height: charSize };
-                for (const obj of mapObjects) {
-                    if (obj.data.isObstacle) {
-                        const correctedObjRect = { x: obj.element.offsetLeft, y: obj.element.offsetTop, width: obj.element.clientWidth, height: obj.element.clientHeight };
-                        if (isColliding(playerRect, correctedObjRect)) {
-                            collision = true;
-                            break;
+                if (targetZone) {
+                    if (!isZoneChangeInProgress) {
+                        triggerZoneChange(targetZone);
+                    }
+                } else {
+                    isZoneChangeInProgress = false;
+
+                    let tempX = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
+                    let tempY = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
+
+                    let collision = false;
+                    const playerRect = { x: tempX, y: tempY, width: charSize, height: charSize };
+                    for (const obj of mapObjects) {
+                        if (obj.data.isObstacle) {
+                            const correctedObjRect = { x: obj.element.offsetLeft, y: obj.element.offsetTop, width: obj.element.clientWidth, height: obj.element.clientHeight };
+                            if (isColliding(playerRect, correctedObjRect)) {
+                                collision = true;
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (!collision) {
-                    x = tempX;
-                    y = tempY;
-                    character.style.left = `${x}px`;
-                    character.style.top = `${y}px`;
-                }
+                    if (!collision) {
+                        x = tempX;
+                        y = tempY;
+                        character.style.left = `${x}px`;
+                        character.style.top = `${y}px`;
+                    }
 
-                if (socket && socket.connected) {
-                    socket.emit('move', { x, y });
-                    checkZoneBoundaries(x, y, gameRect.width, gameRect.height);
+                    if (socket && socket.connected) {
+                        socket.emit('move', { x, y });
+                    }
                 }
             }
             requestAnimationFrame(gameLoop);
         }
 
-        function checkZoneBoundaries(currentX, currentY, mapWidth, mapHeight) {
-            const threshold = 10;
-            let targetZone = null;
-            if (currentY <= threshold) targetZone = 'bac';
-            else if (currentY >= mapHeight - 50 - threshold) targetZone = 'nam';
-            else if (currentX <= threshold) targetZone = 'tay';
-            else if (currentX >= mapWidth - 50 - threshold) targetZone = 'dong';
-
-            if (targetZone) {
-                triggerZoneChange(targetZone);
-            }
-        }
-
         function triggerZoneChange(zone) {
-            if (isZoneChangeInProgress) return;
             isZoneChangeInProgress = true;
-
             const confirmed = confirm(`Bạn có muốn đi đến khu vực ${zone} không?`);
-
             if (confirmed) {
                 socket.emit('change zone', zone);
-                const gameRect = gameContainer.getBoundingClientRect();
-                x = gameRect.width / 2;
-                y = gameRect.height / 2;
-                if(character) {
-                    character.style.left = `${x}px`;
-                    character.style.top = `${y}px`;
-                }
-            } else {
-                // If cancelled, move the player slightly away from the edge
-                const threshold = 15; // A bit more than the detection threshold
-                if (x <= threshold) x = threshold;
-                if (y <= threshold) y = threshold;
-                const gameRect = gameContainer.getBoundingClientRect();
-                const charSize = 50;
-                if (x >= gameRect.width - charSize - threshold) x = gameRect.width - charSize - threshold;
-                if (y >= gameRect.height - charSize - threshold) y = gameRect.height - charSize - threshold;
-                if(character) {
-                    character.style.left = `${x}px`;
-                    character.style.top = `${y}px`;
-                }
             }
-
-            setTimeout(() => { isZoneChangeInProgress = false; }, 500); // Reduced cooldown
+            // The isZoneChangeInProgress flag is reset by the gameLoop when the player moves away from the boundary.
         }
 
         function isColliding(rect1, rect2) {
