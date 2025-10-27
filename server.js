@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,70 +13,83 @@ const io = socketIo(server, {
     }
 });
 
-// Serve static files from the root directory
 app.use(express.static(__dirname));
 
 const players = {};
-const mapFilePath = 'map.json';
-let mapLayout = {
-    objects: [],
-    terrainColor: '#8fbc8f' // Default DarkSeaGreen color
-};
+const zones = ['trung', 'bac', 'nam', 'dong', 'tay'];
+const mapLayouts = {};
 
-// Load map from file on server start
-fs.readFile(mapFilePath, 'utf8', (err, data) => {
-    if (err) {
+// Load all map files on server start synchronously
+zones.forEach(zone => {
+    const mapFilePath = path.join(__dirname, 'maps', `${zone}.json`);
+    try {
+        const data = fs.readFileSync(mapFilePath, 'utf8');
+        mapLayouts[zone] = JSON.parse(data);
+        console.log(`Map layout for ${zone} loaded successfully.`);
+    } catch (err) {
         if (err.code === 'ENOENT') {
-            fs.writeFile(mapFilePath, JSON.stringify(mapLayout, null, 2), (err) => {
-                if (err) console.error('Failed to create map file:', err);
-                else console.log('Map file created with default layout.');
-            });
+            try {
+                const defaultLayout = { objects: [], terrainColor: '#8fbc8f' };
+                fs.writeFileSync(mapFilePath, JSON.stringify(defaultLayout, null, 2));
+                mapLayouts[zone] = defaultLayout;
+                console.log(`Map file for ${zone} created with default layout.`);
+            } catch (writeErr) {
+                console.error(`Failed to create map file for ${zone}:`, writeErr);
+            }
         } else {
-            console.error('Error reading map file:', err);
-        }
-    } else {
-        try {
-            mapLayout = JSON.parse(data);
-            console.log('Map layout loaded successfully.');
-        } catch (parseErr) {
-            console.error('Error parsing map file:', parseErr);
+            console.error(`Error loading or parsing map file for ${zone}:`, err);
         }
     }
 });
 
+function getPlayersInZone(zone) {
+    return Object.values(players).filter(p => p.zone === zone);
+}
+
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
-    // Send the current map to the new player
-    socket.emit('load map', mapLayout);
-
-    // Listen for new player connection
     socket.on('new player', (playerData) => {
-        const newPlayer = {
-            name: playerData.name,
-            image: playerData.image,
-            role: playerData.role,
-            x: playerData.x,
-            y: playerData.y,
-            id: socket.id
+        const zone = 'trung'; // Default starting zone
+        socket.join(zone);
+
+        players[socket.id] = {
+            ...playerData,
+            id: socket.id,
+            zone: zone
         };
-        // Broadcast new player to all other clients first
-        socket.broadcast.emit('new player connected', newPlayer);
-        // Then add the new player to the list
-        players[socket.id] = newPlayer;
-        // Now, send the complete list of players to the new client
-        socket.emit('current players', players);
-        // Update member list for all clients
-        io.emit('update member list', Object.values(players));
+
+        socket.emit('load map', mapLayouts[zone]);
+        socket.emit('current players', getPlayersInZone(zone));
+
+        socket.to(zone).emit('new player connected', players[socket.id]);
+        io.in(zone).emit('update member list', getPlayersInZone(zone));
     });
 
-    // Listen for player movement
+    socket.on('change zone', (newZone) => {
+        if (!zones.includes(newZone) || !players[socket.id]) return;
+
+        const oldZone = players[socket.id].zone;
+        socket.leave(oldZone);
+        io.in(oldZone).emit('player disconnected', socket.id);
+        io.in(oldZone).emit('update member list', getPlayersInZone(oldZone));
+
+        socket.join(newZone);
+        players[socket.id].zone = newZone;
+
+        socket.emit('load map', mapLayouts[newZone]);
+        socket.emit('current players', getPlayersInZone(newZone));
+
+        socket.to(newZone).emit('new player connected', players[socket.id]);
+        io.in(newZone).emit('update member list', getPlayersInZone(newZone));
+    });
+
+
     socket.on('move', (position) => {
         if (players[socket.id]) {
             players[socket.id].x = position.x;
             players[socket.id].y = position.y;
-            // Broadcast movement to all other clients
-            socket.broadcast.emit('player moved', {
+            socket.to(players[socket.id].zone).emit('player moved', {
                 id: socket.id,
                 x: position.x,
                 y: position.y
@@ -83,10 +97,9 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Listen for chat messages
     socket.on('chat message', (message) => {
         if (players[socket.id]) {
-            io.emit('chat message', {
+            io.in(players[socket.id].zone).emit('chat message', {
                 id: socket.id,
                 name: players[socket.id].name,
                 message: message
@@ -94,55 +107,58 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Listen for map saving
     socket.on('save map', (newMapLayout) => {
-        if (players[socket.id] && (players[socket.id].role === 'admin' || players[socket.id].role === 'moderator')) {
-            mapLayout = newMapLayout;
-            fs.writeFile(mapFilePath, JSON.stringify(mapLayout, null, 2), (err) => {
-                if (err) console.error('Failed to save map file:', err);
-                else console.log('Map layout saved successfully.');
+        const player = players[socket.id];
+        if (player && (player.role === 'admin' || player.role === 'moderator')) {
+            const zone = player.zone;
+            mapLayouts[zone] = newMapLayout;
+            const mapFilePath = path.join(__dirname, 'maps', `${zone}.json`);
+            fs.writeFile(mapFilePath, JSON.stringify(mapLayouts[zone], null, 2), (err) => {
+                if (err) console.error(`Failed to save map file for ${zone}:`, err);
+                else console.log(`Map layout for ${zone} saved successfully.`);
             });
-            io.emit('load map', mapLayout);
+            io.in(zone).emit('load map', mapLayouts[zone]);
         }
     });
 
-    // Listen for role changes
     socket.on('change role', (data) => {
         if (players[socket.id] && players[socket.id].role === 'admin') {
-            const targetPlayer = Object.values(players).find(p => p.id === data.targetId);
+            const targetPlayer = players[data.targetId];
             if (targetPlayer) {
                 targetPlayer.role = data.newRole;
-                io.emit('role changed', {
-                    playerId: data.targetId,
-                    newRole: data.newRole
-                });
-                io.emit('update member list', Object.values(players));
+                const zone = targetPlayer.zone;
+                io.in(zone).emit('role changed', { playerId: data.targetId, newRole: data.newRole });
+                io.in(zone).emit('update member list', getPlayersInZone(zone));
             }
         }
     });
 
-    // Listen for object deletion
     socket.on('delete object', (objectData) => {
-        if (players[socket.id] && (players[socket.id].role === 'admin' || players[socket.id].role === 'moderator')) {
-            if (mapLayout.objects) {
-                mapLayout.objects = mapLayout.objects.filter(obj => obj.src !== objectData.src);
-                fs.writeFile(mapFilePath, JSON.stringify(mapLayout, null, 2), (err) => {
-                    if (err) console.error('Failed to save map file after deletion:', err);
-                    else console.log('Map layout saved after object deletion.');
+         const player = players[socket.id];
+        if (player && (player.role === 'admin' || player.role === 'moderator')) {
+            const zone = player.zone;
+            if (mapLayouts[zone].objects) {
+                mapLayouts[zone].objects = mapLayouts[zone].objects.filter(obj => obj.src !== objectData.src);
+                const mapFilePath = path.join(__dirname, 'maps', `${zone}.json`);
+                fs.writeFile(mapFilePath, JSON.stringify(mapLayouts[zone], null, 2), (err) => {
+                    if (err) console.error(`Failed to save map file for ${zone} after deletion:`, err);
+                    else console.log(`Map layout for ${zone} saved after object deletion.`);
                 });
-                io.emit('load map', mapLayout);
+                io.in(zone).emit('load map', mapLayouts[zone]);
             }
         }
     });
 
-    // Listen for disconnection
     socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-        delete players[socket.id];
-        // Broadcast disconnection to all clients
-        io.emit('player disconnected', socket.id);
-        // Update member list for all clients
-        io.emit('update member list', Object.values(players));
+        if (players[socket.id]) {
+            const zone = players[socket.id].zone;
+            console.log(`User ${socket.id} disconnected from ${zone}`);
+            delete players[socket.id];
+            io.in(zone).emit('player disconnected', socket.id);
+            io.in(zone).emit('update member list', getPlayersInZone(zone));
+        } else {
+            console.log('An un-initialized user disconnected:', socket.id);
+        }
     });
 });
 

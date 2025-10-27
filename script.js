@@ -1,37 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Shared logic for forms
     const handleFormSubmit = (formId, callback) => {
         const form = document.getElementById(formId);
-        if (form) {
-            form.addEventListener('submit', callback);
-        }
+        if (form) form.addEventListener('submit', callback);
     };
 
-    // --- LOGIN PAGE ---
-    handleFormSubmit('login-form', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
+    if (document.getElementById('login-form')) {
+        handleFormSubmit('login-form', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username === 'admin' && password === '123456') {
+                localStorage.setItem('role', 'admin');
+            } else {
+                localStorage.setItem('role', 'user');
+            }
+            if (username) {
+                localStorage.setItem('username', username);
+                window.location.href = 'create-character.html';
+            } else {
+                alert('Vui lòng nhập tên người dùng.');
+            }
+        });
+    }
 
-        if (username === 'admin' && password === '123456') {
-            localStorage.setItem('username', 'admin');
-            localStorage.setItem('role', 'admin');
-            window.location.href = 'create-character.html';
-        } else if (username) {
-            localStorage.setItem('username', username);
-            localStorage.setItem('role', 'user');
-            window.location.href = 'create-character.html';
-        } else {
-            alert('Vui lòng nhập tên người dùng.');
-        }
-    });
-
-    // --- CHARACTER CREATION PAGE ---
-    const createCharacterForm = document.getElementById('create-character-form');
-    if (createCharacterForm) {
+    if (document.getElementById('create-character-form')) {
         const characterImageInput = document.getElementById('character-image');
         const previewImage = document.getElementById('preview-image');
-
         characterImageInput.addEventListener('change', () => {
             const file = characterImageInput.files[0];
             if (file) {
@@ -43,16 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 reader.readAsDataURL(file);
             }
         });
-
         handleFormSubmit('create-character-form', (e) => {
             e.preventDefault();
             const characterName = document.getElementById('character-name').value;
             const characterImageSrc = previewImage.src;
-
             if (characterName) {
                 localStorage.setItem('characterName', characterName);
                 if (characterImageSrc && characterImageSrc !== window.location.href) {
-                     localStorage.setItem('characterImage', characterImageSrc);
+                    localStorage.setItem('characterImage', characterImageSrc);
                 } else {
                     localStorage.removeItem('characterImage');
                 }
@@ -63,197 +55,200 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- GAME PAGE ---
     const gameContainer = document.getElementById('game-container');
     if (gameContainer) {
         const statusElement = document.getElementById('connection-status');
-        const role = localStorage.getItem('role');
-        let socket;
-        let isMultiplayer = false;
+        const role = localStorage.getItem('role') || 'user';
+        const characterName = localStorage.getItem('characterName') || 'Guest';
+        const characterImage = localStorage.getItem('characterImage');
+
+        let socket, character, x = 800, y = 450, mapObjects = [], selectedObject = null;
+        let isZoneChangeInProgress = false;
+        const players = {};
+        const speed = 5;
+        const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
         try {
-            const serverURL = window.location.origin;
-            console.log(`Connecting to server at: ${serverURL}`);
-            socket = io(serverURL, {
-                reconnection: false,
-                timeout: 3000
-            });
-            isMultiplayer = true;
+            socket = io(window.location.origin, { reconnection: false, timeout: 3000 });
 
             socket.on('connect', () => {
+                document.getElementById('ui-character-name').textContent = characterName;
                 statusElement.textContent = 'Trực tuyến';
                 statusElement.style.color = 'green';
                 setupOnlineMode();
             });
 
             socket.on('connect_error', () => {
-                isMultiplayer = false;
                 statusElement.textContent = 'Ngoại tuyến';
                 statusElement.style.color = 'red';
-                socket.disconnect();
+                if (socket) socket.disconnect();
                 setupOfflineMode();
             });
-
         } catch (e) {
-            isMultiplayer = false;
             statusElement.textContent = 'Ngoại tuyến';
             statusElement.style.color = 'red';
             setupOfflineMode();
-        }
-
-        const players = {};
-        const characterName = localStorage.getItem('characterName') || 'Guest';
-        const characterImage = localStorage.getItem('characterImage');
-        let character; // This will hold the main player's element
-
-        if (characterName) {
-            document.getElementById('ui-character-name').textContent = characterName;
-        }
-
-        if (isMultiplayer) {
-            socket.emit('new player', {
-                name: characterName,
-                image: characterImage,
-                role: role, // Send the role
-                x: 800,
-                y: 450
-            });
-
-            socket.on('update member list', (memberList) => {
-                const memberListElement = document.getElementById('member-list');
-                memberListElement.innerHTML = ''; // Clear the list
-                for (const member of memberList) {
-                    const li = document.createElement('li');
-                    li.textContent = `${member.name} (${member.role})`;
-
-                    if (role === 'admin' && member.id !== socket.id) {
-                        const roleSelect = document.createElement('select');
-                        roleSelect.innerHTML = `
-                            <option value="user" ${member.role === 'user' ? 'selected' : ''}>User</option>
-                            <option value="moderator" ${member.role === 'moderator' ? 'selected' : ''}>Moderator</option>
-                            <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>
-                        `;
-                        roleSelect.addEventListener('change', (e) => {
-                            socket.emit('change role', { targetId: member.id, newRole: e.target.value });
-                        });
-                        li.appendChild(roleSelect);
-                    }
-                    memberListElement.appendChild(li);
-                }
-            });
-
-            socket.on('role changed', (data) => {
-                if (players[data.playerId]) {
-                    players[data.playerId].role = data.newRole;
-                }
-                if (socket.id === data.playerId) {
-                    localStorage.setItem('role', data.newRole);
-                    // Reload the page to apply new permissions
-                    window.location.reload();
-                }
-            });
-
-            // Listen for the list of current players
-            socket.on('current players', (serverPlayers) => {
-                for (const id in serverPlayers) {
-                    const playerElement = createPlayer(serverPlayers[id]);
-                    if (id === socket.id) {
-                        character = playerElement; // Assign the main character
-                    }
-                }
-            });
-
-            // Listen for a new player connecting
-            socket.on('new player connected', (playerData) => {
-                createPlayer(playerData);
-            });
-
-            // Listen for player movement
-            socket.on('player moved', (data) => {
-                if (players[data.id]) {
-                    players[data.id].style.left = data.x + 'px';
-                    players[data.id].style.top = data.y + 'px';
-                }
-            });
-
-            socket.on('player disconnected', (id) => {
-                if (players[id]) {
-                    players[id].remove();
-                    delete players[id];
-                }
-            });
-
-            socket.on('load map', loadMap);
         }
 
         function createPlayer(playerData) {
             if (!playerData || !playerData.id) return;
             const playerElement = document.createElement('div');
             playerElement.classList.add('character');
-            playerElement.style.left = playerData.x + 'px';
-            playerElement.style.top = playerData.y + 'px';
+            playerElement.style.left = `${playerData.x}px`;
+            playerElement.style.top = `${playerData.y}px`;
             if (playerData.image) {
-                 playerElement.style.backgroundImage = `url(${playerData.image})`;
+                playerElement.style.backgroundImage = `url(${playerData.image})`;
             }
-
             const nameTag = document.createElement('div');
             nameTag.classList.add('name-tag');
             nameTag.textContent = playerData.name;
             playerElement.appendChild(nameTag);
-
             players[playerData.id] = playerElement;
             gameContainer.appendChild(playerElement);
-            return playerElement; // Return the created element
+            return playerElement;
         }
 
-        let x = 800;
-        let y = 450;
-        const speed = 5;
+        function setupOnlineMode() {
+            try {
+                console.log("Setting up online mode...");
+                document.getElementById('chat-container').style.display = 'flex';
+                if (role === 'admin' || role === 'moderator') {
+                    const adminTools = document.getElementById('admin-tools');
+                    adminTools.style.display = 'block';
+                    if (role === 'moderator') {
+                        adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
+                        adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
+                        adminTools.querySelector('button#delete-embed-button').style.display = 'none';
+                    }
+                }
+                console.log("Emitting 'new player' event.");
+                socket.emit('new player', {
+                    name: characterName,
+                    image: characterImage,
+                    role: role,
+                    x: x,
+                    y: y
+                });
 
-        const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+                console.log("Creating main character immediately.");
+                character = createPlayer({
+                    id: socket.id,
+                    name: characterName,
+                    image: characterImage,
+                    role: role,
+                    x: x,
+                    y: y
+                });
+                 console.log("Main character created:", character);
 
-        document.addEventListener('keydown', (e) => {
-            if (document.activeElement === document.getElementById('chat-input')) return;
-            if (e.key in keys) keys[e.key] = true;
-        });
+                socket.on('current players', (serverPlayers) => {
+                    console.log("'current players' event received:", serverPlayers);
+                    for (const id in players) {
+                        if (id !== socket.id) {
+                            players[id].remove();
+                            delete players[id];
+                        }
+                    }
+                    serverPlayers.forEach(playerData => {
+                        if (playerData.id !== socket.id) {
+                            createPlayer(playerData);
+                        } else {
+                            x = playerData.x;
+                            y = playerData.y;
+                            character.style.left = `${x}px`;
+                            character.style.top = `${y}px`;
+                        }
+                    });
+                     console.log("Finished processing 'current players'.");
+                });
 
-        document.addEventListener('keyup', (e) => {
-            if (e.key in keys) keys[e.key] = false;
-        });
+                socket.on('new player connected', (playerData) => {
+                    console.log("'new player connected' event received:", playerData);
+                    createPlayer(playerData);
+                });
 
-        function createDustParticle(element) {
-            const particle = document.createElement('div');
-            particle.classList.add('dust-particle');
-            const size = Math.random() * 10 + 5;
-            particle.style.width = `${size}px`;
-            particle.style.height = `${size}px`;
+                socket.on('player moved', (data) => {
+                    if (players[data.id]) {
+                        players[data.id].style.left = `${data.x}px`;
+                        players[data.id].style.top = `${data.y}px`;
+                    }
+                });
 
-            const rect = element.getBoundingClientRect();
-            particle.style.left = `${rect.left + window.scrollX + rect.width / 2 - size / 2}px`;
-            particle.style.top = `${rect.top + window.scrollY + rect.height - size}px`;
+                socket.on('player disconnected', (id) => {
+                     console.log("'player disconnected' event received:", id);
+                    if (players[id]) {
+                        players[id].remove();
+                        delete players[id];
+                    }
+                });
 
-            document.body.appendChild(particle);
-            setTimeout(() => particle.remove(), 1000);
+                socket.on('update member list', (memberList) => {
+                    console.log("'update member list' event received:", memberList);
+                    const memberListElement = document.getElementById('member-list');
+                    memberListElement.innerHTML = '';
+                    memberList.forEach(member => {
+                        const li = document.createElement('li');
+                        li.textContent = `${member.name} (${member.role})`;
+                        if (role === 'admin' && member.id !== socket.id) {
+                            const roleSelect = document.createElement('select');
+                            roleSelect.innerHTML = `<option value="user" ${member.role === 'user' ? 'selected' : ''}>User</option><option value="moderator" ${member.role === 'moderator' ? 'selected' : ''}>Moderator</option><option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>`;
+                            roleSelect.addEventListener('change', (e) => socket.emit('change role', { targetId: member.id, newRole: e.target.value }));
+                            li.appendChild(roleSelect);
+                        }
+                        memberListElement.appendChild(li);
+                    });
+                });
+
+                socket.on('role changed', (data) => {
+                     console.log("'role changed' event received:", data);
+                    if (players[data.playerId]) {
+                        players[data.playerId].role = data.newRole;
+                    }
+                    if (socket.id === data.playerId) {
+                        localStorage.setItem('role', data.newRole);
+                        window.location.reload();
+                    }
+                });
+
+                socket.on('load map', (mapLayout) => {
+                    console.log("'load map' event received:", mapLayout);
+                    loadMap(mapLayout);
+                });
+
+                socket.on('chat message', (data) => {
+                    const chatLog = document.getElementById('chat-log');
+                    const messageElement = document.createElement('div');
+                    messageElement.textContent = `${data.name}: ${data.message}`;
+                    chatLog.appendChild(messageElement);
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                    const playerElement = data.id === socket.id ? character : players[data.id];
+                    if (playerElement) showChatBubble(playerElement, data.name, data.message);
+                });
+
+                 console.log("Online mode setup complete.");
+            } catch (error) {
+                console.error("Error in setupOnlineMode:", error);
+                socket.disconnect(); // Disconnect on error
+            }
         }
 
-        function isColliding(rect1, rect2) {
-            return (
-                rect1.x < rect2.x + rect2.width &&
-                rect1.x + rect1.width > rect2.x &&
-                rect1.y < rect2.y + rect2.height &&
-                rect1.y + rect1.height > rect2.y
-            );
+        function setupOfflineMode() {
+            document.getElementById('chat-container').style.display = 'none';
+             if (role === 'admin' || role === 'moderator') {
+                document.getElementById('admin-tools').style.display = 'block';
+             }
+            loadMapFromLocalStorage();
+            character = createPlayer({ id: 'local', name: characterName, image: characterImage, role: role, x: x, y: y });
         }
 
         function gameLoop() {
-            if (!character) { // Wait until the character is created
+            if (!character || isZoneChangeInProgress) {
                 requestAnimationFrame(gameLoop);
                 return;
             }
 
             let moved = false;
             const newPos = { x, y };
-
             if (keys.ArrowUp) { newPos.y -= speed; moved = true; }
             if (keys.ArrowDown) { newPos.y += speed; moved = true; }
             if (keys.ArrowLeft) { newPos.x -= speed; moved = true; }
@@ -263,25 +258,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const charSize = 50;
                 const gameRect = gameContainer.getBoundingClientRect();
 
-                // Clamp position to game boundaries
-                newPos.x = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
-                newPos.y = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
+                // Temporary position for collision check, clamped to boundaries
+                let tempX = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
+                let tempY = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
 
-                // Collision detection
                 let collision = false;
-                const playerRect = { x: newPos.x, y: newPos.y, width: charSize, height: charSize };
-
+                const playerRect = { x: tempX, y: tempY, width: charSize, height: charSize };
                 for (const obj of mapObjects) {
                     if (obj.data.isObstacle) {
-                        const objRect = obj.element.getBoundingClientRect();
-                        // Adjust for game container's position relative to viewport
-                        const correctedObjRect = {
-                            x: obj.element.offsetLeft,
-                            y: obj.element.offsetTop,
-                            width: objRect.width,
-                            height: objRect.height
-                        };
-
+                        const correctedObjRect = { x: obj.element.offsetLeft, y: obj.element.offsetTop, width: obj.element.clientWidth, height: obj.element.clientHeight };
                         if (isColliding(playerRect, correctedObjRect)) {
                             collision = true;
                             break;
@@ -290,99 +275,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (!collision) {
-                    x = newPos.x;
-                    y = newPos.y;
+                    x = tempX;
+                    y = tempY;
                     character.style.left = `${x}px`;
                     character.style.top = `${y}px`;
                 }
 
-                createDustParticle(character);
-
-                if (isMultiplayer) {
+                if (socket && socket.connected) {
                     socket.emit('move', { x, y });
+                    checkZoneBoundaries(x, y, gameRect.width, gameRect.height);
                 }
             }
             requestAnimationFrame(gameLoop);
         }
-        gameLoop();
 
-        let mapObjects = [];
-        let selectedObject = null;
+        function checkZoneBoundaries(currentX, currentY, mapWidth, mapHeight) {
+            const threshold = 10;
+            let targetZone = null;
+            if (currentY <= threshold) targetZone = 'bac';
+            else if (currentY >= mapHeight - 50 - threshold) targetZone = 'nam';
+            else if (currentX <= threshold) targetZone = 'tay';
+            else if (currentX >= mapWidth - 50 - threshold) targetZone = 'dong';
 
-        makeDraggable(document.getElementById('game-ui'));
-        makeDraggable(document.getElementById('member-list-container'));
-
-        if (role === 'admin' || role === 'moderator') {
-            const adminTools = document.getElementById('admin-tools');
-            if (role === 'admin') {
-                makeDraggable(adminTools);
-            }
-
-            document.getElementById('terrain-color-input').addEventListener('input', (e) => {
-                gameContainer.style.backgroundColor = e.target.value;
-            });
-
-            document.getElementById('add-object-input').addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => createMapObject({ src: event.target.result, left: '100px', top: '100px' });
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            document.getElementById('save-map-button').addEventListener('click', saveMap);
-
-            document.getElementById('delete-object-button').addEventListener('click', () => {
-                if (selectedObject) {
-                    const objectData = mapObjects.find(obj => obj.element === selectedObject);
-                    if (objectData) {
-                        if (isMultiplayer) {
-                            socket.emit('delete object', { src: objectData.data.src });
-                        } else {
-                            selectedObject.remove();
-                            mapObjects = mapObjects.filter(obj => obj.element !== selectedObject);
-                            deselectObject();
-                        }
-                    }
-                }
-            });
-
-            if (role === 'admin') {
-                document.getElementById('delete-embed-button').addEventListener('click', () => {
-                    document.getElementById('embed-code-input').value = '';
-                    saveMap();
-                });
+            if (targetZone) {
+                triggerZoneChange(targetZone);
             }
         }
 
-        if (isMultiplayer) {
-            function sanitizeHTML(str) {
-                const temp = document.createElement('div');
-                temp.textContent = str;
-                return temp.innerHTML;
+        function triggerZoneChange(zone) {
+            if (isZoneChangeInProgress) return;
+            isZoneChangeInProgress = true;
+
+            if (confirm(`Bạn có muốn đi đến khu vực ${zone} không?`)) {
+                socket.emit('change zone', zone);
+                // Reset player position for the new zone
+                x = 800;
+                y = 450;
             }
 
-            document.getElementById('chat-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const chatInput = document.getElementById('chat-input');
-                if (chatInput.value) {
-                    const sanitizedMessage = sanitizeHTML(chatInput.value);
-                    socket.emit('chat message', sanitizedMessage);
-                    chatInput.value = '';
-                }
-            });
+            setTimeout(() => { isZoneChangeInProgress = false; }, 1000); // Cooldown to prevent spam
+        }
 
-            socket.on('chat message', (data) => {
-                const chatLog = document.getElementById('chat-log');
-                const messageElement = document.createElement('div');
-                messageElement.textContent = `${data.name}: ${data.message}`;
-                chatLog.appendChild(messageElement);
-                chatLog.scrollTop = chatLog.scrollHeight;
-
-                const playerElement = data.id === socket.id ? character : players[data.id];
-                if (playerElement) showChatBubble(playerElement, data.name, data.message);
-            });
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.y + rect1.height > rect2.y;
         }
 
         function showChatBubble(playerElement, name, message) {
@@ -402,49 +337,31 @@ document.addEventListener('DOMContentLoaded', () => {
             img.style.left = data.left;
             img.style.top = data.top;
             gameContainer.appendChild(img);
-            // Ensure data object is not directly the element
             const objectData = { src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
             mapObjects.push({ element: img, data: objectData });
-
             if (role === 'admin' || role === 'moderator') makeDraggable(img);
         }
 
         function makeDraggable(element) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             const handle = element.querySelector('.drag-handle') || element;
-
-            handle.onmousedown = dragMouseDown;
-
-            // Handle selection for map objects
+            handle.onmousedown = (e) => {
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = (ev) => {
+                    ev.preventDefault();
+                    pos1 = pos3 - ev.clientX;
+                    pos2 = pos4 - ev.clientY;
+                    pos3 = ev.clientX;
+                    pos4 = ev.clientY;
+                    element.style.top = `${element.offsetTop - pos2}px`;
+                    element.style.left = `${element.offsetLeft - pos1}px`;
+                };
+            };
             if (element.classList.contains('map-object')) {
-                element.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent triggering game container click
-                    selectObject(element);
-                });
-            }
-
-            function dragMouseDown(e) {
-                e.preventDefault();
-                // We don't set selectedObject here anymore, it's done on click
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
-            }
-
-            function elementDrag(e) {
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                element.style.top = (element.offsetTop - pos2) + "px";
-                element.style.left = (element.offsetLeft - pos1) + "px";
-            }
-
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
+                element.addEventListener('click', (e) => { e.stopPropagation(); selectObject(element); });
             }
         }
 
@@ -452,83 +369,32 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedObject = element;
             const selectedObjectTools = document.getElementById('selected-object-tools');
             selectedObjectTools.style.display = 'block';
-
-            // Sync checkbox with object's data
             const objectData = mapObjects.find(obj => obj.element === element)?.data;
             const isObstacleCheckbox = document.getElementById('is-obstacle-checkbox');
-            if (objectData) {
-                isObstacleCheckbox.checked = objectData.isObstacle || false;
-            }
-
-            // Update object data on checkbox change
-            isObstacleCheckbox.onchange = () => {
-                if (objectData) {
-                    objectData.isObstacle = isObstacleCheckbox.checked;
-                }
-            };
-
-            // Add a visual indicator for selection
+            if (objectData) isObstacleCheckbox.checked = objectData.isObstacle || false;
+            isObstacleCheckbox.onchange = () => { if (objectData) objectData.isObstacle = isObstacleCheckbox.checked; };
             document.querySelectorAll('.map-object').forEach(obj => obj.style.border = 'none');
             element.style.border = '2px solid blue';
         }
 
         function deselectObject() {
-            if (selectedObject) {
-                selectedObject.style.border = 'none';
-            }
+            if (selectedObject) selectedObject.style.border = 'none';
             selectedObject = null;
             document.getElementById('selected-object-tools').style.display = 'none';
         }
 
-        // Deselect when clicking on the container background
-        gameContainer.addEventListener('click', deselectObject);
-
-
         function saveMap() {
-            const embedCode = document.getElementById('embed-code-input').value;
             const mapLayout = {
-                objects: mapObjects.map(obj => ({
-                    src: obj.element.src,
-                    left: obj.element.style.left,
-                    top: obj.element.style.top,
-                    isObstacle: obj.data.isObstacle || false // Include isObstacle property
-                })),
+                objects: mapObjects.map(obj => ({ src: obj.element.src, left: obj.element.style.left, top: obj.element.style.top, isObstacle: obj.data.isObstacle || false })),
                 terrainColor: gameContainer.style.backgroundColor,
-                embedCode: embedCode // Add embed code to the layout
+                embedCode: document.getElementById('embed-code-input').value
             };
-            if (isMultiplayer) {
+            if (socket && socket.connected) {
                 socket.emit('save map', mapLayout);
             } else {
                 localStorage.setItem('mapLayout', JSON.stringify(mapLayout));
             }
             alert('Bản đồ đã được lưu!');
-        }
-
-        function setEmbedContent(container, htmlContent) {
-            container.innerHTML = ''; // Clear previous content
-            if (!htmlContent) {
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'block';
-            const template = document.createElement('template');
-            template.innerHTML = htmlContent;
-
-            Array.from(template.content.childNodes).forEach(node => {
-                if (node.nodeName === 'SCRIPT') {
-                    const script = document.createElement('script');
-                    script.src = node.src;
-                    script.async = true;
-                    // Copy other attributes if necessary
-                    if(node.hasAttribute('data-video-id')) {
-                        script.setAttribute('data-video-id', node.getAttribute('data-video-id'));
-                    }
-                    document.body.appendChild(script); // Append to body to ensure execution
-                } else {
-                    container.appendChild(node.cloneNode(true));
-                }
-            });
         }
 
         function loadMap(mapLayout) {
@@ -537,14 +403,30 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mapLayout) {
                 if (mapLayout.terrainColor) gameContainer.style.backgroundColor = mapLayout.terrainColor;
                 if (mapLayout.objects) mapLayout.objects.forEach(createMapObject);
-
-                const embedContainer = document.getElementById('embed-container');
-                setEmbedContent(embedContainer, mapLayout.embedCode);
-
+                setEmbedContent(document.getElementById('embed-container'), mapLayout.embedCode);
                 if (role === 'admin') {
                     document.getElementById('embed-code-input').value = mapLayout.embedCode || '';
                 }
             }
+        }
+
+        function setEmbedContent(container, htmlContent) {
+            container.innerHTML = '';
+            if (!htmlContent) { container.style.display = 'none'; return; }
+            container.style.display = 'block';
+            const template = document.createElement('template');
+            template.innerHTML = htmlContent;
+            Array.from(template.content.childNodes).forEach(node => {
+                if (node.nodeName === 'SCRIPT') {
+                    const script = document.createElement('script');
+                    script.src = node.src;
+                    script.async = true;
+                    if(node.hasAttribute('data-video-id')) script.setAttribute('data-video-id', node.getAttribute('data-video-id'));
+                    document.body.appendChild(script);
+                } else {
+                    container.appendChild(node.cloneNode(true));
+                }
+            });
         }
 
         function loadMapFromLocalStorage() {
@@ -552,41 +434,53 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMap(mapLayout);
         }
 
-        function setupOnlineMode() {
-            const chatContainer = document.getElementById('chat-container');
-            if (chatContainer) chatContainer.style.display = 'flex';
-
-            const adminTools = document.getElementById('admin-tools');
-            if (role === 'admin' || role === 'moderator') {
-                adminTools.style.display = 'block';
-                // Hide embed functionality for moderators
-                if (role === 'moderator') {
-                    adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
-                    adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
-                    adminTools.querySelector('button#delete-embed-button').style.display = 'none';
+        document.addEventListener('keydown', (e) => { if (document.activeElement !== document.getElementById('chat-input') && e.key in keys) keys[e.key] = true; });
+        document.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
+        makeDraggable(document.getElementById('game-ui'));
+        makeDraggable(document.getElementById('member-list-container'));
+        gameContainer.addEventListener('click', deselectObject);
+        if (role === 'admin' || role === 'moderator') {
+            document.getElementById('terrain-color-input').addEventListener('input', (e) => { gameContainer.style.backgroundColor = e.target.value; });
+            document.getElementById('add-object-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => createMapObject({ src: event.target.result, left: '100px', top: '100px' });
+                    reader.readAsDataURL(file);
                 }
+            });
+            document.getElementById('save-map-button').addEventListener('click', saveMap);
+            document.getElementById('delete-object-button').addEventListener('click', () => {
+                if (selectedObject) {
+                    const objectData = mapObjects.find(obj => obj.element === selectedObject);
+                    if (objectData) {
+                        if (socket && socket.connected) {
+                            socket.emit('delete object', { src: objectData.data.src });
+                        } else {
+                            selectedObject.remove();
+                            mapObjects = mapObjects.filter(obj => obj.element !== selectedObject);
+                            deselectObject();
+                        }
+                    }
+                }
+            });
+            if (role === 'admin') {
+                document.getElementById('delete-embed-button').addEventListener('click', () => {
+                    document.getElementById('embed-code-input').value = '';
+                    saveMap();
+                });
             }
         }
-
-        function setupOfflineMode() {
-            const chatContainer = document.getElementById('chat-container');
-            if (chatContainer) chatContainer.style.display = 'none';
-
-            const adminTools = document.getElementById('admin-tools');
-            if (role === 'admin' || role === 'moderator') {
-                adminTools.style.display = 'block';
-                // Hide embed functionality for moderators
-                if (role === 'moderator') {
-                    adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
-                    adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
-                    adminTools.querySelector('button#delete-embed-button').style.display = 'none';
-                }
+        document.getElementById('chat-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput.value && socket && socket.connected) {
+                const temp = document.createElement('div');
+                temp.textContent = chatInput.value;
+                socket.emit('chat message', temp.innerHTML);
+                chatInput.value = '';
             }
-            loadMapFromLocalStorage();
-        }
-
-        if (!isMultiplayer) {
-            setupOfflineMode();
-        }
+        });
+        gameLoop();
     }
 });
