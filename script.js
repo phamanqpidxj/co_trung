@@ -112,9 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 console.log("Setting up online mode...");
                 document.getElementById('chat-container').style.display = 'flex';
+                const gameUi = document.getElementById('game-ui');
                 if (role === 'admin' || role === 'moderator') {
+                    gameUi.classList.add('menu-open'); // Open menu by default for admins/mods
                     const adminTools = document.getElementById('admin-tools');
-                    adminTools.style.display = 'block';
                     if (role === 'moderator') {
                         adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
                         adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
@@ -306,14 +307,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isZoneChangeInProgress) return;
             isZoneChangeInProgress = true;
 
-            if (confirm(`Bạn có muốn đi đến khu vực ${zone} không?`)) {
+            const confirmed = confirm(`Bạn có muốn đi đến khu vực ${zone} không?`);
+
+            if (confirmed) {
                 socket.emit('change zone', zone);
-                // Reset player position for the new zone
-                x = 800;
-                y = 450;
+                const gameRect = gameContainer.getBoundingClientRect();
+                x = gameRect.width / 2;
+                y = gameRect.height / 2;
+                if(character) {
+                    character.style.left = `${x}px`;
+                    character.style.top = `${y}px`;
+                }
+            } else {
+                // If cancelled, move the player slightly away from the edge
+                const threshold = 15; // A bit more than the detection threshold
+                if (x <= threshold) x = threshold;
+                if (y <= threshold) y = threshold;
+                const gameRect = gameContainer.getBoundingClientRect();
+                const charSize = 50;
+                if (x >= gameRect.width - charSize - threshold) x = gameRect.width - charSize - threshold;
+                if (y >= gameRect.height - charSize - threshold) y = gameRect.height - charSize - threshold;
+                if(character) {
+                    character.style.left = `${x}px`;
+                    character.style.top = `${y}px`;
+                }
             }
 
-            setTimeout(() => { isZoneChangeInProgress = false; }, 1000); // Cooldown to prevent spam
+            setTimeout(() => { isZoneChangeInProgress = false; }, 500); // Reduced cooldown
         }
 
         function isColliding(rect1, rect2) {
@@ -436,8 +456,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.addEventListener('keydown', (e) => { if (document.activeElement !== document.getElementById('chat-input') && e.key in keys) keys[e.key] = true; });
         document.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
-        makeDraggable(document.getElementById('game-ui'));
-        makeDraggable(document.getElementById('member-list-container'));
+
+        const gameUi = document.getElementById('game-ui');
+        makeDraggable(gameUi);
+        document.getElementById('menu-button').addEventListener('click', () => {
+            gameUi.classList.toggle('menu-open');
+        });
+
         gameContainer.addEventListener('click', deselectObject);
         if (role === 'admin' || role === 'moderator') {
             document.getElementById('terrain-color-input').addEventListener('input', (e) => { gameContainer.style.backgroundColor = e.target.value; });

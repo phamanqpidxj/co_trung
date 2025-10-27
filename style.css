@@ -153,17 +153,25 @@ button:hover {
 #game-ui {
     top: 20px;
     left: 20px;
+    width: 250px; /* Set a fixed width for the main UI panel */
 }
 
-#admin-tools {
-    top: 150px; /* Position it below the main UI */
-    z-index: 11; /* Ensure it's above the chat container */
+/* Hide admin tools and member list by default */
+#admin-tools,
+#member-list-container {
+    display: none;
+    margin-top: 10px; /* Add some space above the tools */
+}
+
+/* Show tools when the menu is open */
+#game-ui.menu-open #admin-tools,
+#game-ui.menu-open #member-list-container {
+    display: block;
 }
 
 #member-list-container {
-    top: 20px;
-    right: 20px;
-    width: 200px;
+    width: 100%; /* Make it full-width within the UI panel */
+    box-sizing: border-box;
 }
 
 #member-list {
