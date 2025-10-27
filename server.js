@@ -5,7 +5,12 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 // Serve static files from the root directory
 app.use(express.static(__dirname));
@@ -40,19 +45,41 @@ fs.readFile(mapFilePath, 'utf8', (err, data) => {
 
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
-    socket.emit('load map', mapLayout);
 
+    // Send the current map and players to the new player
+    socket.emit('load map', mapLayout);
+    socket.emit('current players', players);
+
+    // Listen for new player connection
     socket.on('new player', (playerData) => {
-        players[socket.id] = playerData;
+        const newPlayer = {
+            name: playerData.name,
+            image: playerData.image,
+            x: playerData.x,
+            y: playerData.y,
+            id: socket.id
+        };
+        // Broadcast new player to all other clients first
+        socket.broadcast.emit('new player connected', newPlayer);
+        // Then add the new player to the list
+        players[socket.id] = newPlayer;
     });
 
+    // Listen for player movement
     socket.on('move', (position) => {
         if (players[socket.id]) {
             players[socket.id].x = position.x;
             players[socket.id].y = position.y;
+            // Broadcast movement to all other clients
+            socket.broadcast.emit('player moved', {
+                id: socket.id,
+                x: position.x,
+                y: position.y
+            });
         }
     });
 
+    // Listen for chat messages
     socket.on('chat message', (message) => {
         if (players[socket.id]) {
             io.emit('chat message', {
@@ -63,6 +90,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Listen for map saving
     socket.on('save map', (newMapLayout) => {
         mapLayout = newMapLayout;
         fs.writeFile(mapFilePath, JSON.stringify(mapLayout, null, 2), (err) => {
@@ -72,16 +100,14 @@ io.on('connection', (socket) => {
         io.emit('load map', mapLayout);
     });
 
+    // Listen for disconnection
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
         delete players[socket.id];
+        // Broadcast disconnection to all clients
         io.emit('player disconnected', socket.id);
     });
 });
-
-setInterval(() => {
-    io.emit('update players', players);
-}, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

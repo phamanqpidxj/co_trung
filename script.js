@@ -121,29 +121,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 y: 450
             });
 
-            socket.on('update players', (serverPlayers) => {
-                 for (const id in players) {
-                    if (!serverPlayers[id]) {
-                        players[id].remove();
-                        delete players[id];
-                    }
-                }
+            // Listen for the list of current players
+            socket.on('current players', (serverPlayers) => {
                 for (const id in serverPlayers) {
                     if (id !== socket.id) {
-                        const playerData = serverPlayers[id];
-                        if (!players[id]) {
-                            players[id] = document.createElement('div');
-                            players[id].classList.add('character');
-                            const nameTag = document.createElement('div');
-                            nameTag.classList.add('name-tag');
-                            nameTag.textContent = playerData.name;
-                            players[id].appendChild(nameTag);
-                            gameContainer.appendChild(players[id]);
-                        }
-                        players[id].style.left = playerData.x + 'px';
-                        players[id].style.top = playerData.y + 'px';
-                        players[id].style.backgroundImage = `url(${playerData.image})`;
+                        createPlayer(serverPlayers[id]);
                     }
+                }
+            });
+
+            // Listen for a new player connecting
+            socket.on('new player connected', (playerData) => {
+                createPlayer(playerData);
+            });
+
+            // Listen for player movement
+            socket.on('player moved', (data) => {
+                if (players[data.id]) {
+                    players[data.id].style.left = data.x + 'px';
+                    players[data.id].style.top = data.y + 'px';
                 }
             });
 
@@ -155,6 +151,25 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             socket.on('load map', loadMap);
+        }
+
+        function createPlayer(playerData) {
+            if (!playerData || !playerData.id) return;
+            const playerElement = document.createElement('div');
+            playerElement.classList.add('character');
+            playerElement.style.left = playerData.x + 'px';
+            playerElement.style.top = playerData.y + 'px';
+            if (playerData.image) {
+                 playerElement.style.backgroundImage = `url(${playerData.image})`;
+            }
+
+            const nameTag = document.createElement('div');
+            nameTag.classList.add('name-tag');
+            nameTag.textContent = playerData.name;
+            playerElement.appendChild(nameTag);
+
+            players[playerData.id] = playerElement;
+            gameContainer.appendChild(playerElement);
         }
 
         let x = 800;
