@@ -104,11 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const players = {};
         const characterName = localStorage.getItem('characterName') || 'Guest';
         const characterImage = localStorage.getItem('characterImage');
+        let character; // This will hold the main player's element
 
-        const character = document.getElementById('character');
-        if (characterImage) {
-            character.style.backgroundImage = `url(${characterImage})`;
-        }
         if (characterName) {
             document.getElementById('ui-character-name').textContent = characterName;
         }
@@ -124,8 +121,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Listen for the list of current players
             socket.on('current players', (serverPlayers) => {
                 for (const id in serverPlayers) {
-                    if (id !== socket.id) {
-                        createPlayer(serverPlayers[id]);
+                    const playerElement = createPlayer(serverPlayers[id]);
+                    if (id === socket.id) {
+                        character = playerElement; // Assign the main character
                     }
                 }
             });
@@ -170,13 +168,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             players[playerData.id] = playerElement;
             gameContainer.appendChild(playerElement);
+            return playerElement; // Return the created element
         }
 
         let x = 800;
         let y = 450;
         const speed = 5;
-        character.style.left = `${x}px`;
-        character.style.top = `${y}px`;
 
         const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
@@ -205,6 +202,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function gameLoop() {
+            if (!character) { // Wait until the character is created
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
             let moved = false;
             const newPos = { x, y };
 

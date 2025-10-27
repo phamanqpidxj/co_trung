@@ -46,9 +46,8 @@ fs.readFile(mapFilePath, 'utf8', (err, data) => {
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
-    // Send the current map and players to the new player
+    // Send the current map to the new player
     socket.emit('load map', mapLayout);
-    socket.emit('current players', players);
 
     // Listen for new player connection
     socket.on('new player', (playerData) => {
@@ -63,6 +62,8 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('new player connected', newPlayer);
         // Then add the new player to the list
         players[socket.id] = newPlayer;
+        // Now, send the complete list of players to the new client
+        socket.emit('current players', players);
     });
 
     // Listen for player movement
