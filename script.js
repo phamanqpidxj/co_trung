@@ -189,22 +189,44 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key in keys) keys[e.key] = false;
         });
 
+        function createDustParticle(element) {
+            const particle = document.createElement('div');
+            particle.classList.add('dust-particle');
+            const size = Math.random() * 10 + 5;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+
+            const rect = element.getBoundingClientRect();
+            particle.style.left = `${rect.left + window.scrollX + rect.width / 2 - size / 2}px`;
+            particle.style.top = `${rect.top + window.scrollY + rect.height - size}px`;
+
+            document.body.appendChild(particle);
+            setTimeout(() => particle.remove(), 1000);
+        }
+
         function gameLoop() {
-            if (keys.ArrowUp) y -= speed;
-            if (keys.ArrowDown) y += speed;
-            if (keys.ArrowLeft) x -= speed;
-            if (keys.ArrowRight) x += speed;
+            let moved = false;
+            const newPos = { x, y };
 
-            const charSize = 50;
-            const gameRect = gameContainer.getBoundingClientRect();
-            x = Math.max(0, Math.min(x, gameRect.width - charSize));
-            y = Math.max(0, Math.min(y, gameRect.height - charSize));
+            if (keys.ArrowUp) { newPos.y -= speed; moved = true; }
+            if (keys.ArrowDown) { newPos.y += speed; moved = true; }
+            if (keys.ArrowLeft) { newPos.x -= speed; moved = true; }
+            if (keys.ArrowRight) { newPos.x += speed; moved = true; }
 
-            character.style.left = `${x}px`;
-            character.style.top = `${y}px`;
+            if (moved) {
+                const charSize = 50;
+                const gameRect = gameContainer.getBoundingClientRect();
+                x = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
+                y = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
 
-            if (isMultiplayer) {
-                socket.emit('move', { x, y });
+                character.style.left = `${x}px`;
+                character.style.top = `${y}px`;
+
+                createDustParticle(character);
+
+                if (isMultiplayer) {
+                    socket.emit('move', { x, y });
+                }
             }
             requestAnimationFrame(gameLoop);
         }

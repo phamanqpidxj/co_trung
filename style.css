@@ -100,6 +100,25 @@ button:hover {
     background-size: cover;
     background-position: center;
     border: 2px solid #fff;
+    transition: left 0.1s linear, top 0.1s linear;
+}
+
+.dust-particle {
+    position: absolute;
+    background-color: rgba(210, 180, 140, 0.5);
+    border-radius: 50%;
+    animation: fadeOut 1s forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0);
+    }
 }
 
 .map-object {
@@ -108,15 +127,21 @@ button:hover {
     height: auto;
 }
 
-#game-ui, #admin-tools {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    background: rgba(0,0,0,0.7);
+#game-ui, #admin-tools, #chat-container {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
     color: white;
     padding: 1rem;
-    border-radius: 8px;
+    position: absolute;
     z-index: 10;
+}
+
+#game-ui {
+    top: 20px;
+    left: 20px;
 }
 
 #admin-tools {
