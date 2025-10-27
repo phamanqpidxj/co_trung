@@ -26,8 +26,28 @@
                 <label for="terrain-color-input">Màu địa hình:</label>
                 <input type="color" id="terrain-color-input">
             </div>
+            <hr>
+            <div id="selected-object-tools" style="display: none;">
+                <h4>Thuộc tính đối tượng</h4>
+                <div>
+                    <input type="checkbox" id="is-obstacle-checkbox">
+                    <label for="is-obstacle-checkbox">Là vật cản</label>
+                </div>
+            </div>
+            <hr>
+            <div>
+                <h4>Nội dung nhúng</h4>
+                <textarea id="embed-code-input" rows="4" style="width: 100%;"></textarea>
+            </div>
             <button id="save-map-button">Lưu bản đồ</button>
         </div>
+
+        <div id="member-list-container">
+            <h4 class="drag-handle">Thành viên</h4>
+            <ul id="member-list"></ul>
+        </div>
+
+        <div id="embed-container" style="display: none;"></div>
 
         <div id="chat-container">
             <div id="chat-log"></div>

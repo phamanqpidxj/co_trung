@@ -2,7 +2,7 @@ body, html {
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
+    background-color: #8fbc8f; /* Match game background */
     overflow: hidden;
     height: 100%;
 }
@@ -15,11 +15,14 @@ body, html {
 }
 
 form {
-    background: white;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    color: white;
     padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    width: 300px;
+    width: 350px; /* Increased width slightly for better spacing */
 }
 
 h2 {
@@ -38,24 +41,32 @@ label {
 
 input[type="text"], input[type="password"], input[type="file"] {
     width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 0.75rem; /* Increased padding */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px; /* Rounded corners */
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+input[type="text"]::placeholder, input[type="password"]::placeholder {
+    color: rgba(255, 255, 255, 0.7);
 }
 
 button {
     width: 100%;
     padding: 0.75rem;
-    border: none;
-    border-radius: 4px;
-    background-color: #007bff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background-color: rgba(0, 123, 255, 0.8); /* Semi-transparent blue */
     color: white;
     font-size: 1rem;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 button:hover {
-    background-color: #0056b3;
+    background-color: rgba(0, 86, 179, 0.8); /* Darker blue on hover */
 }
 
 .character-preview {
@@ -127,7 +138,7 @@ button:hover {
     height: auto;
 }
 
-#game-ui, #admin-tools, #chat-container {
+#game-ui, #admin-tools, #chat-container, #member-list-container {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
     backdrop-filter: blur(10px);
     border-radius: 15px;
@@ -146,6 +157,40 @@ button:hover {
 
 #admin-tools {
     top: 150px; /* Position it below the main UI */
+    z-index: 11; /* Ensure it's above the chat container */
+}
+
+#member-list-container {
+    top: 20px;
+    right: 20px;
+    width: 200px;
+}
+
+#member-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#member-list li {
+    padding: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#member-list li:last-child {
+    border-bottom: none;
+}
+
+#embed-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20; /* Ensure it's on top */
+    padding: 10px;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .drag-handle {

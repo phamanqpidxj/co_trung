@@ -54,6 +54,7 @@ io.on('connection', (socket) => {
         const newPlayer = {
             name: playerData.name,
             image: playerData.image,
+            role: playerData.role,
             x: playerData.x,
             y: playerData.y,
             id: socket.id
@@ -64,6 +65,8 @@ io.on('connection', (socket) => {
         players[socket.id] = newPlayer;
         // Now, send the complete list of players to the new client
         socket.emit('current players', players);
+        // Update member list for all clients
+        io.emit('update member list', Object.values(players));
     });
 
     // Listen for player movement
@@ -107,6 +110,8 @@ io.on('connection', (socket) => {
         delete players[socket.id];
         // Broadcast disconnection to all clients
         io.emit('player disconnected', socket.id);
+        // Update member list for all clients
+        io.emit('update member list', Object.values(players));
     });
 });
 

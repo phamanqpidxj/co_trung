@@ -114,8 +114,19 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.emit('new player', {
                 name: characterName,
                 image: characterImage,
+                role: role, // Send the role
                 x: 800,
                 y: 450
+            });
+
+            socket.on('update member list', (memberList) => {
+                const memberListElement = document.getElementById('member-list');
+                memberListElement.innerHTML = ''; // Clear the list
+                for (const member of memberList) {
+                    const li = document.createElement('li');
+                    li.textContent = `${member.name} (${member.role})`;
+                    memberListElement.appendChild(li);
+                }
             });
 
             // Listen for the list of current players
@@ -201,6 +212,15 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => particle.remove(), 1000);
         }
 
+        function isColliding(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y
+            );
+        }
+
         function gameLoop() {
             if (!character) { // Wait until the character is created
                 requestAnimationFrame(gameLoop);
@@ -218,11 +238,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (moved) {
                 const charSize = 50;
                 const gameRect = gameContainer.getBoundingClientRect();
-                x = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
-                y = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
 
-                character.style.left = `${x}px`;
-                character.style.top = `${y}px`;
+                // Clamp position to game boundaries
+                newPos.x = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
+                newPos.y = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
+
+                // Collision detection
+                let collision = false;
+                const playerRect = { x: newPos.x, y: newPos.y, width: charSize, height: charSize };
+
+                for (const obj of mapObjects) {
+                    if (obj.data.isObstacle) {
+                        const objRect = obj.element.getBoundingClientRect();
+                        // Adjust for game container's position relative to viewport
+                        const correctedObjRect = {
+                            x: obj.element.offsetLeft,
+                            y: obj.element.offsetTop,
+                            width: objRect.width,
+                            height: objRect.height
+                        };
+
+                        if (isColliding(playerRect, correctedObjRect)) {
+                            collision = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!collision) {
+                    x = newPos.x;
+                    y = newPos.y;
+                    character.style.left = `${x}px`;
+                    character.style.top = `${y}px`;
+                }
 
                 createDustParticle(character);
 
@@ -238,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let selectedObject = null;
 
         makeDraggable(document.getElementById('game-ui'));
+        makeDraggable(document.getElementById('member-list-container'));
 
         if (role === 'admin') {
             const adminTools = document.getElementById('admin-tools');
@@ -306,18 +355,30 @@ document.addEventListener('DOMContentLoaded', () => {
             img.style.left = data.left;
             img.style.top = data.top;
             gameContainer.appendChild(img);
-            mapObjects.push({ element: img, data: data });
+            // Ensure data object is not directly the element
+            const objectData = { src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
+            mapObjects.push({ element: img, data: objectData });
+
             if (role === 'admin') makeDraggable(img);
         }
 
         function makeDraggable(element) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             const handle = element.querySelector('.drag-handle') || element;
+
             handle.onmousedown = dragMouseDown;
+
+            // Handle selection for map objects
+            if (element.classList.contains('map-object')) {
+                element.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent triggering game container click
+                    selectObject(element);
+                });
+            }
 
             function dragMouseDown(e) {
                 e.preventDefault();
-                selectedObject = element.classList.contains('map-object') ? element : null;
+                // We don't set selectedObject here anymore, it's done on click
                 pos3 = e.clientX;
                 pos4 = e.clientY;
                 document.onmouseup = closeDragElement;
@@ -340,14 +401,53 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        function selectObject(element) {
+            selectedObject = element;
+            const selectedObjectTools = document.getElementById('selected-object-tools');
+            selectedObjectTools.style.display = 'block';
+
+            // Sync checkbox with object's data
+            const objectData = mapObjects.find(obj => obj.element === element)?.data;
+            const isObstacleCheckbox = document.getElementById('is-obstacle-checkbox');
+            if (objectData) {
+                isObstacleCheckbox.checked = objectData.isObstacle || false;
+            }
+
+            // Update object data on checkbox change
+            isObstacleCheckbox.onchange = () => {
+                if (objectData) {
+                    objectData.isObstacle = isObstacleCheckbox.checked;
+                }
+            };
+
+            // Add a visual indicator for selection
+            document.querySelectorAll('.map-object').forEach(obj => obj.style.border = 'none');
+            element.style.border = '2px solid blue';
+        }
+
+        function deselectObject() {
+            if (selectedObject) {
+                selectedObject.style.border = 'none';
+            }
+            selectedObject = null;
+            document.getElementById('selected-object-tools').style.display = 'none';
+        }
+
+        // Deselect when clicking on the container background
+        gameContainer.addEventListener('click', deselectObject);
+
+
         function saveMap() {
+            const embedCode = document.getElementById('embed-code-input').value;
             const mapLayout = {
                 objects: mapObjects.map(obj => ({
                     src: obj.element.src,
                     left: obj.element.style.left,
-                    top: obj.element.style.top
+                    top: obj.element.style.top,
+                    isObstacle: obj.data.isObstacle || false // Include isObstacle property
                 })),
-                terrainColor: gameContainer.style.backgroundColor
+                terrainColor: gameContainer.style.backgroundColor,
+                embedCode: embedCode // Add embed code to the layout
             };
             if (isMultiplayer) {
                 socket.emit('save map', mapLayout);
@@ -363,6 +463,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mapLayout) {
                 if (mapLayout.terrainColor) gameContainer.style.backgroundColor = mapLayout.terrainColor;
                 if (mapLayout.objects) mapLayout.objects.forEach(createMapObject);
+
+                const embedContainer = document.getElementById('embed-container');
+                if (role === 'admin' && mapLayout.embedCode) {
+                    embedContainer.innerHTML = mapLayout.embedCode;
+                    embedContainer.style.display = 'block';
+                    document.getElementById('embed-code-input').value = mapLayout.embedCode;
+                } else {
+                    embedContainer.innerHTML = '';
+                    embedContainer.style.display = 'none';
+                }
             }
         }
 

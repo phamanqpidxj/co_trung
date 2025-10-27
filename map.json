@@ -1,4 +1,5 @@
 {
   "objects": [],
-  "terrainColor": "#8fbc8f"
+  "terrainColor": "rgb(143, 188, 143)",
+  "embedCode": "<h1>Test Embed</h1>"
 }
