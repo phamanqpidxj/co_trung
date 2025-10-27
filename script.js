@@ -185,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 socket.on('load map', (data) => {
                     currentZone = data.zone;
                     loadMap(data.map);
+                    displayZoneTitle();
                 });
                 socket.on('chat message', (data) => {
                     const chatLog = document.getElementById('chat-log');
@@ -261,6 +262,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 isZoneChangeInProgress = false;
             }
             requestAnimationFrame(gameLoop);
+        }
+
+        function displayZoneTitle() {
+            const existingTitle = document.getElementById('zone-title');
+            if (existingTitle) {
+                existingTitle.remove();
+            }
+
+            if (currentZone === 'dong') {
+                const titleElement = document.createElement('div');
+                titleElement.id = 'zone-title';
+                titleElement.textContent = 'Đông Hải';
+                gameContainer.appendChild(titleElement);
+            }
         }
 
         function triggerZoneChange(zone) {

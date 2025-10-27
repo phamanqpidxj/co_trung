@@ -264,3 +264,16 @@ button:hover {
     white-space: normal;
     word-wrap: break-word;
 }
+
+#zone-title {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: #000080; /* Navy Blue */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 5;
+    pointer-events: none; /* Make it non-interactive */
+}
