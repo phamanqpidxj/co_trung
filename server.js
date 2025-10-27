@@ -19,6 +19,15 @@ const players = {};
 const zones = ['trung', 'bac', 'nam', 'dong', 'tay'];
 const mapLayouts = {};
 
+const zoneLayout = {
+    'trung': { 'up': 'bac', 'down': 'nam', 'left': 'tay', 'right': 'dong' },
+    'bac':   { 'down': 'trung' },
+    'nam':   { 'up': 'trung' },
+    'tay':   { 'right': 'trung' },
+    'dong':  { 'left': 'trung' }
+};
+
+
 // Load all map files on server start synchronously
 zones.forEach(zone => {
     const mapFilePath = path.join(__dirname, 'maps', `${zone}.json`);
@@ -59,7 +68,8 @@ io.on('connection', (socket) => {
             zone: zone
         };
 
-        socket.emit('load map', mapLayouts[zone]);
+        socket.emit('load map', { map: mapLayouts[zone], zone: zone });
+        socket.emit('zone layout', zoneLayout);
         socket.emit('current players', getPlayersInZone(zone));
 
         socket.to(zone).emit('new player connected', players[socket.id]);
@@ -67,10 +77,11 @@ io.on('connection', (socket) => {
     });
 
     socket.on('change zone', (newZone) => {
-        if (!zones.includes(newZone) || !players[socket.id]) return;
-
         const player = players[socket.id];
+        if (!player || !zones.includes(newZone)) return;
+
         const oldZone = player.zone;
+
 
         // Leave old zone and notify players
         socket.leave(oldZone);
@@ -85,7 +96,7 @@ io.on('connection', (socket) => {
         socket.join(newZone);
 
         // Send the new map and the full list of players in the new zone
-        socket.emit('load map', mapLayouts[newZone]);
+        socket.emit('load map', { map: mapLayouts[newZone], zone: newZone });
         socket.emit('current players', getPlayersInZone(newZone));
 
         // Notify other players in the new zone that this player has connected

@@ -64,20 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let socket, character, x = 800, y = 450, mapObjects = [], selectedObject = null;
         let isZoneChangeInProgress = false;
+        let zoneLayout = {};
+        let currentZone = 'trung';
         const players = {};
         const speed = 5;
         const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
         try {
             socket = io(window.location.origin, { reconnection: false, timeout: 3000 });
-
             socket.on('connect', () => {
                 document.getElementById('ui-character-name').textContent = characterName;
                 statusElement.textContent = 'Trực tuyến';
                 statusElement.style.color = 'green';
                 setupOnlineMode();
             });
-
             socket.on('connect_error', () => {
                 statusElement.textContent = 'Ngoại tuyến';
                 statusElement.style.color = 'red';
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function createPlayer(playerData) {
-            if (!playerData || !playerData.id) return;
+            if (!playerData || !playerData.id) return null;
             const playerElement = document.createElement('div');
             playerElement.classList.add('character');
             playerElement.style.left = `${playerData.x}px`;
@@ -110,73 +110,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function setupOnlineMode() {
             try {
-                console.log("Setting up online mode...");
                 document.getElementById('chat-container').style.display = 'flex';
-                const gameUi = document.getElementById('game-ui');
                 if (role === 'admin' || role === 'moderator') {
-                    gameUi.classList.add('menu-open'); // Open menu by default for admins/mods
-                    const adminTools = document.getElementById('admin-tools');
+                    document.getElementById('game-ui').classList.add('menu-open');
                     if (role === 'moderator') {
+                        const adminTools = document.getElementById('admin-tools');
                         adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
                         adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
                         adminTools.querySelector('button#delete-embed-button').style.display = 'none';
                     }
                 }
-                console.log("Emitting 'new player' event.");
-                socket.emit('new player', {
-                    name: characterName,
-                    image: characterImage,
-                    role: role,
-                    x: x,
-                    y: y
-                });
-
-                console.log("Creating main character immediately.");
-                character = createPlayer({
-                    id: socket.id,
-                    name: characterName,
-                    image: characterImage,
-                    role: role,
-                    x: x,
-                    y: y
-                });
-                 console.log("Main character created:", character);
+                socket.emit('new player', { name: characterName, image: characterImage, role: role, x: x, y: y });
+                character = createPlayer({ id: socket.id, name: characterName, image: characterImage, role: role, x: x, y: y });
 
                 socket.on('current players', (serverPlayers) => {
-                    console.log("'current players' event received:", serverPlayers);
-                    for (const id in players) {
-                        if (id !== socket.id) {
-                            players[id].remove();
-                            delete players[id];
-                        }
-                    }
+                    Object.keys(players).filter(id => id !== socket.id).forEach(id => {
+                        players[id].remove();
+                        delete players[id];
+                    });
                     serverPlayers.forEach(playerData => {
-                        if (playerData.id !== socket.id) {
-                            createPlayer(playerData);
-                        } else {
-                            x = playerData.x;
-                            y = playerData.y;
-                            character.style.left = `${x}px`;
-                            character.style.top = `${y}px`;
+                        if (playerData.id !== socket.id) createPlayer(playerData);
+                        else {
+                            x = playerData.x; y = playerData.y;
+                            if(character) {
+                                character.style.left = `${x}px`;
+                                character.style.top = `${y}px`;
+                            }
                         }
                     });
-                     console.log("Finished processing 'current players'.");
                 });
 
-                socket.on('new player connected', (playerData) => {
-                    console.log("'new player connected' event received:", playerData);
-                    createPlayer(playerData);
-                });
-
+                socket.on('new player connected', createPlayer);
                 socket.on('player moved', (data) => {
                     if (players[data.id]) {
                         players[data.id].style.left = `${data.x}px`;
                         players[data.id].style.top = `${data.y}px`;
+                        if (data.id === socket.id) { x = data.x; y = data.y; }
                     }
                 });
-
                 socket.on('player disconnected', (id) => {
-                     console.log("'player disconnected' event received:", id);
                     if (players[id]) {
                         players[id].remove();
                         delete players[id];
@@ -184,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 socket.on('update member list', (memberList) => {
-                    console.log("'update member list' event received:", memberList);
                     const memberListElement = document.getElementById('member-list');
                     memberListElement.innerHTML = '';
                     memberList.forEach(member => {
@@ -201,104 +172,93 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 socket.on('role changed', (data) => {
-                     console.log("'role changed' event received:", data);
-                    if (players[data.playerId]) {
-                        players[data.playerId].role = data.newRole;
-                    }
+                    if (players[data.playerId]) players[data.playerId].role = data.newRole;
                     if (socket.id === data.playerId) {
                         localStorage.setItem('role', data.newRole);
                         window.location.reload();
                     }
                 });
 
-                socket.on('load map', (mapLayout) => {
-                    console.log("'load map' event received:", mapLayout);
-                    loadMap(mapLayout);
+                socket.on('zone layout', (layout) => {
+                    zoneLayout = layout;
                 });
-
+                socket.on('load map', (data) => {
+                    currentZone = data.zone;
+                    loadMap(data.map);
+                });
                 socket.on('chat message', (data) => {
                     const chatLog = document.getElementById('chat-log');
                     const messageElement = document.createElement('div');
-                    messageElement.textContent = `${data.name}: ${data.message}`;
+                    const temp = document.createElement('div');
+                    temp.textContent = data.message;
+                    messageElement.innerHTML = `<strong>${data.name}:</strong> ${temp.innerHTML}`;
                     chatLog.appendChild(messageElement);
                     chatLog.scrollTop = chatLog.scrollHeight;
-                    const playerElement = data.id === socket.id ? character : players[data.id];
-                    if (playerElement) showChatBubble(playerElement, data.name, data.message);
+                    if (players[data.id]) showChatBubble(players[data.id], data.name, data.message);
                 });
-
-                 console.log("Online mode setup complete.");
             } catch (error) {
                 console.error("Error in setupOnlineMode:", error);
-                socket.disconnect(); // Disconnect on error
+                if (socket) socket.disconnect();
             }
         }
 
         function setupOfflineMode() {
             document.getElementById('chat-container').style.display = 'none';
-             if (role === 'admin' || role === 'moderator') {
+            if (role === 'admin' || role === 'moderator') {
                 document.getElementById('admin-tools').style.display = 'block';
-             }
+            }
             loadMapFromLocalStorage();
             character = createPlayer({ id: 'local', name: characterName, image: characterImage, role: role, x: x, y: y });
         }
 
         function gameLoop() {
-            if (!character) {
-                requestAnimationFrame(gameLoop);
-                return;
-            }
+            if (!character || !gameContainer) { requestAnimationFrame(gameLoop); return; }
 
-            let moved = false;
             const newPos = { x, y };
-            if (keys.ArrowUp) { newPos.y -= speed; moved = true; }
-            if (keys.ArrowDown) { newPos.y += speed; moved = true; }
-            if (keys.ArrowLeft) { newPos.x -= speed; moved = true; }
-            if (keys.ArrowRight) { newPos.x += speed; moved = true; }
+            if (keys.ArrowUp) newPos.y -= speed;
+            if (keys.ArrowDown) newPos.y += speed;
+            if (keys.ArrowLeft) newPos.x -= speed;
+            if (keys.ArrowRight) newPos.x += speed;
 
-            if (moved) {
-                const charSize = 50;
-                const gameRect = gameContainer.getBoundingClientRect();
-                const threshold = 10;
+            const charSize = 50;
+            const gameRect = gameContainer.getBoundingClientRect();
+            let tempX = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
+            let tempY = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
 
-                let targetZone = null;
-                if (newPos.y <= threshold) targetZone = 'bac';
-                else if (newPos.y >= gameRect.height - charSize - threshold) targetZone = 'nam';
-                else if (newPos.x <= threshold) targetZone = 'tay';
-                else if (newPos.x >= gameRect.width - charSize - threshold) targetZone = 'dong';
-
-                if (targetZone) {
-                    if (!isZoneChangeInProgress) {
-                        triggerZoneChange(targetZone);
-                    }
-                } else {
-                    isZoneChangeInProgress = false;
-
-                    let tempX = Math.max(0, Math.min(newPos.x, gameRect.width - charSize));
-                    let tempY = Math.max(0, Math.min(newPos.y, gameRect.height - charSize));
-
-                    let collision = false;
-                    const playerRect = { x: tempX, y: tempY, width: charSize, height: charSize };
-                    for (const obj of mapObjects) {
-                        if (obj.data.isObstacle) {
-                            const correctedObjRect = { x: obj.element.offsetLeft, y: obj.element.offsetTop, width: obj.element.clientWidth, height: obj.element.clientHeight };
-                            if (isColliding(playerRect, correctedObjRect)) {
-                                collision = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!collision) {
-                        x = tempX;
-                        y = tempY;
-                        character.style.left = `${x}px`;
-                        character.style.top = `${y}px`;
-                    }
-
-                    if (socket && socket.connected) {
-                        socket.emit('move', { x, y });
+            let collision = false;
+            const playerRect = { x: tempX, y: tempY, width: charSize, height: charSize };
+            for (const obj of mapObjects) {
+                if (obj.data.isObstacle) {
+                    const correctedObjRect = { x: obj.element.offsetLeft, y: obj.element.offsetTop, width: obj.element.clientWidth, height: obj.element.clientHeight };
+                    if (isColliding(playerRect, correctedObjRect)) {
+                        collision = true;
+                        break;
                     }
                 }
+            }
+
+            if (!collision) {
+                x = tempX;
+                y = tempY;
+                character.style.left = `${x}px`;
+                character.style.top = `${y}px`;
+                if (socket && socket.connected) socket.emit('move', { x, y });
+            }
+
+            const threshold = 10;
+            let direction = null;
+            if (y <= threshold) direction = 'up';
+            else if (y >= gameRect.height - charSize - threshold) direction = 'down';
+            else if (x <= threshold) direction = 'left';
+            else if (x >= gameRect.width - charSize - threshold) direction = 'right';
+
+            if (direction) {
+                const targetZone = zoneLayout[currentZone] ? zoneLayout[currentZone][direction] : null;
+                if (targetZone && !isZoneChangeInProgress) {
+                    triggerZoneChange(targetZone);
+                }
+            } else {
+                isZoneChangeInProgress = false;
             }
             requestAnimationFrame(gameLoop);
         }
@@ -307,9 +267,25 @@ document.addEventListener('DOMContentLoaded', () => {
             isZoneChangeInProgress = true;
             const confirmed = confirm(`Bạn có muốn đi đến khu vực ${zone} không?`);
             if (confirmed) {
+                for (const key in keys) { keys[key] = false; }
                 socket.emit('change zone', zone);
+            } else {
+                // Nudge the player back from the edge to prevent getting stuck
+                const threshold = 15;
+                const charSize = 50;
+                const gameRect = gameContainer.getBoundingClientRect();
+                if (y <= threshold) y = threshold;
+                if (y >= gameRect.height - charSize - threshold) y = gameRect.height - charSize - threshold;
+                if (x <= threshold) x = threshold;
+                if (x >= gameRect.width - charSize - threshold) x = gameRect.width - charSize - threshold;
+
+                character.style.left = `${x}px`;
+                character.style.top = `${y}px`;
+                if (socket && socket.connected) socket.emit('move', { x, y });
+
+                // Allow a new trigger attempt after a short delay
+                setTimeout(() => { isZoneChangeInProgress = false; }, 100);
             }
-            // The isZoneChangeInProgress flag is reset by the gameLoop when the player moves away from the boundary.
         }
 
         function isColliding(rect1, rect2) {
@@ -321,7 +297,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (existingBubble) existingBubble.remove();
             const bubble = document.createElement('div');
             bubble.classList.add('chat-bubble');
-            bubble.innerHTML = `<strong>${name}:</strong> ${message}`;
+            const temp = document.createElement('div');
+            temp.textContent = message;
+            bubble.innerHTML = `<strong>${name}:</strong> ${temp.innerHTML}`;
             playerElement.appendChild(bubble);
             setTimeout(() => bubble.remove(), 5000);
         }
