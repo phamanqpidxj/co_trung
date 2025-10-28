@@ -5,20 +5,29 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (document.getElementById('login-form')) {
-        handleFormSubmit('login-form', (e) => {
+        handleFormSubmit('login-form', async (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            if (username === 'admin' && password === '123456') {
-                localStorage.setItem('role', 'admin');
-            } else {
-                localStorage.setItem('role', 'user');
+
+            if (!username) {
+                alert('Vui lòng nhập tên người dùng.');
+                return;
             }
-            if (username) {
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                localStorage.setItem('role', data.role);
                 localStorage.setItem('username', username);
                 window.location.href = 'create-character.html';
-            } else {
-                alert('Vui lòng nhập tên người dùng.');
+            } catch (error) {
+                console.error('Login failed:', error);
+                alert('Đã xảy ra lỗi đăng nhập.');
             }
         });
     }
@@ -348,8 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
             img.className = 'map-object';
             img.style.left = data.left;
             img.style.top = data.top;
+            img.dataset.id = data.id || Date.now(); // Assign or generate a unique ID
             gameContainer.appendChild(img);
-            const objectData = { src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
+            const objectData = { id: img.dataset.id, src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
             mapObjects.push({ element: img, data: objectData });
             if (role === 'admin' || role === 'moderator') makeDraggable(img);
         }
@@ -462,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const objectData = mapObjects.find(obj => obj.element === selectedObject);
                     if (objectData) {
                         if (socket && socket.connected) {
-                            socket.emit('delete object', { src: objectData.data.src });
+                            socket.emit('delete object', { id: objectData.data.id });
                         } else {
                             selectedObject.remove();
                             mapObjects = mapObjects.filter(obj => obj.element !== selectedObject);

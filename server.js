@@ -3,6 +3,11 @@ const http = require('http');
 const socketIo = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const { JSDOM } = require('jsdom');
+const DOMPurify = require('dompurify');
+
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
 
 const app = express();
 const server = http.createServer(app);
@@ -14,6 +19,16 @@ const io = socketIo(server, {
 });
 
 app.use(express.static(__dirname));
+app.use(express.json());
+
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    if (username === 'admin' && password === '123456') {
+        res.json({ role: 'admin' });
+    } else {
+        res.json({ role: 'user' });
+    }
+});
 
 const players = {};
 const zones = ['trung', 'bac', 'nam', 'dong', 'tay'];
@@ -138,6 +153,9 @@ io.on('connection', (socket) => {
         const player = players[socket.id];
         if (player && (player.role === 'admin' || player.role === 'moderator')) {
             const zone = player.zone;
+            if (newMapLayout.embedCode) {
+                newMapLayout.embedCode = purify.sanitize(newMapLayout.embedCode);
+            }
             mapLayouts[zone] = newMapLayout;
             const mapFilePath = path.join(__dirname, 'maps', `${zone}.json`);
             fs.writeFile(mapFilePath, JSON.stringify(mapLayouts[zone], null, 2), (err) => {
@@ -165,13 +183,13 @@ io.on('connection', (socket) => {
         if (player && (player.role === 'admin' || player.role === 'moderator')) {
             const zone = player.zone;
             if (mapLayouts[zone].objects) {
-                mapLayouts[zone].objects = mapLayouts[zone].objects.filter(obj => obj.src !== objectData.src);
+                mapLayouts[zone].objects = mapLayouts[zone].objects.filter(obj => obj.id !== objectData.id);
                 const mapFilePath = path.join(__dirname, 'maps', `${zone}.json`);
                 fs.writeFile(mapFilePath, JSON.stringify(mapLayouts[zone], null, 2), (err) => {
                     if (err) console.error(`Failed to save map file for ${zone} after deletion:`, err);
                     else console.log(`Map layout for ${zone} saved after object deletion.`);
                 });
-                io.in(zone).emit('load map', mapLayouts[zone]);
+                io.in(zone).emit('load map', { map: mapLayouts[zone], zone: zone });
             }
         }
     });
