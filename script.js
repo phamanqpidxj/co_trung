@@ -270,11 +270,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 existingTitle.remove();
             }
 
-            if (currentZone === 'dong') {
+            let titleText = '';
+            switch (currentZone) {
+                case 'dong':
+                    titleText = 'Đông Hải';
+                    break;
+                case 'tay':
+                    titleText = 'Tây Mạc';
+                    break;
+                case 'bac':
+                    titleText = 'Bắc Nguyên';
+                    break;
+                case 'nam':
+                    titleText = 'Nam Cương';
+                    break;
+                case 'trung':
+                    titleText = 'Trung Nguyên';
+                    break;
+            }
+
+            if (titleText) {
                 const titleElement = document.createElement('div');
                 titleElement.id = 'zone-title';
-                titleElement.textContent = 'Đông Hải';
+                titleElement.textContent = titleText;
                 gameContainer.appendChild(titleElement);
+
+                setTimeout(() => {
+                    titleElement.remove();
+                }, 5000);
             }
         }
 

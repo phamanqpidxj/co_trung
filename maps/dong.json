@@ -1,5 +1,42 @@
 {
-  "objects": [],
+  "objects": [
+    {
+      "src": "https://i.imgur.com/8c5zIZC.png",
+      "left": "100px",
+      "top": "150px",
+      "isObstacle": true
+    },
+    {
+      "src": "https://i.imgur.com/8c5zIZC.png",
+      "left": "1200px",
+      "top": "600px",
+      "isObstacle": true
+    },
+    {
+      "src": "https://i.imgur.com/wZ4v2bC.png",
+      "left": "300px",
+      "top": "400px",
+      "isObstacle": false
+    },
+    {
+      "src": "https://i.imgur.com/wZ4v2bC.png",
+      "left": "900px",
+      "top": "200px",
+      "isObstacle": false
+    },
+    {
+      "src": "https://i.imgur.com/S5a3tGV.png",
+      "left": "500px",
+      "top": "50px",
+      "isObstacle": false
+    },
+    {
+      "src": "https://i.imgur.com/7aJg2aW.png",
+      "left": "600px",
+      "top": "700px",
+      "isObstacle": false
+    }
+  ],
   "terrainColor": "lightblue",
   "embedCode": ""
 }

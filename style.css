@@ -265,15 +265,22 @@ button:hover {
     word-wrap: break-word;
 }
 
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, -50px); }
+    20% { opacity: 1; transform: translate(-50%, 0); }
+    80% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, 50px); }
+}
+
 #zone-title {
     position: absolute;
-    top: 50px;
+    top: 100px;
     left: 50%;
-    transform: translateX(-50%);
-    font-size: 48px;
+    font-size: 4em;
     font-weight: bold;
-    color: #000080; /* Navy Blue */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    color: white;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
     z-index: 5;
-    pointer-events: none; /* Make it non-interactive */
+    pointer-events: none;
+    animation: fadeInOut 5s forwards;
 }
