@@ -1,32 +1,28 @@
 {
   "objects": [
     {
-      "id": "1729881800000",
-      "src": "https://img.craftpix.net/2024/09/Free-Mountain-Peak-Pixel-Art-Backgrounds3.jpg",
-      "left": "150px",
-      "top": "100px",
-      "isObstacle": true
-    },
-    {
-      "id": "1729881810000",
-      "src": "https://img.craftpix.net/2024/09/Free-Mountain-Peak-Pixel-Art-Backgrounds4.jpg",
-      "left": "800px",
-      "top": "50px",
+      "src": "https://img.craftpix.net/2024/09/Free-Mountain-Peak-Pixel-Art-Backgrounds5.jpg",
+      "left": "0px",
+      "top": "0px",
       "isObstacle": false
     },
     {
-      "id": "1729881820000",
-      "src": "https://img.craftpix.net/2021/02/Free-Pixel-Art-Forest-Items-Pack.png",
-      "left": "400px",
+      "src": "https://img.craftpix.net/2023/12/Free-Medieval-Training-Arena-2D-Tileset/T_3.png",
+      "left": "500px",
+      "top": "200px",
+      "isObstacle": true
+    },
+    {
+      "src": "https://img.craftpix.net/2021/02/Free-Pixel-Art-Forest-Items-Pack/Tree_1.png",
+      "left": "100px",
       "top": "500px",
       "isObstacle": true
     },
     {
-      "id": "1729881830000",
-      "src": "https://img.craftpix.net/2024/09/Free-Mountain-Peak-Pixel-Art-Backgrounds2.jpg",
-      "left": "1100px",
-      "top": "300px",
-      "isObstacle": false
+      "src": "https://img.craftpix.net/2023/12/Free-Medieval-Training-Arena-2D-Tileset/W_4.png",
+      "left": "800px",
+      "top": "200px",
+      "isObstacle": true
     }
   ],
   "terrainColor": "#98FB98",

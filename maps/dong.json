@@ -1,31 +1,27 @@
 {
   "objects": [
     {
-      "id": "1729881600000",
       "src": "https://img.craftpix.net/2024/09/Free-Underwater-World-Pixel-Art-Backgrounds2.png",
-      "left": "100px",
+      "left": "0px",
+      "top": "400px",
+      "isObstacle": false
+    },
+    {
+      "src": "https://img.craftpix.net/2023/12/Free-Medieval-Training-Arena-2D-Tileset/W_1.png",
+      "left": "800px",
       "top": "100px",
       "isObstacle": true
     },
     {
-      "id": "1729881610000",
-      "src": "https://img.craftpix.net/2024/09/Free-Underwater-World-Pixel-Art-Backgrounds3.png",
-      "left": "500px",
-      "top": "300px",
-      "isObstacle": false
-    },
-    {
-      "id": "1729881620000",
-      "src": "https://img.craftpix.net/2020/10/Free-2D-Game-Fish-Sprite-Sheets.png",
-      "left": "800px",
+      "src": "https://img.craftpix.net/2020/10/Free-2D-Game-Fish-Sprite-Sheets/1.png",
+      "left": "200px",
       "top": "500px",
       "isObstacle": false
     },
     {
-      "id": "1729881630000",
-      "src": "https://img.craftpix.net/2024/09/Free-Underwater-World-Pixel-Art-Backgrounds4.png",
-      "left": "1200px",
-      "top": "200px",
+      "src": "https://img.craftpix.net/2023/12/Free-Medieval-Training-Arena-2D-Tileset/T_1.png",
+      "left": "1100px",
+      "top": "100px",
       "isObstacle": true
     }
   ],
