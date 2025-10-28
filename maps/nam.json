@@ -1,34 +1,32 @@
 {
   "objects": [
     {
-      "src": "https://i.imgur.com/G5T7RzT.png",
-      "left": "50px",
-      "top": "50px",
+      "id": "1729881900000",
+      "src": "https://img.craftpix.net/2025/03/Free-Pixel-Art-Dungeon-Objects-Asset-Pack4.jpg",
+      "left": "200px",
+      "top": "150px",
       "isObstacle": true
     },
     {
-      "src": "https://i.imgur.com/G5T7RzT.png",
-      "left": "900px",
+      "id": "1729881910000",
+      "src": "https://img.craftpix.net/2025/03/Free-Pixel-Art-Dungeon-Objects-Asset-Pack5.jpg",
+      "left": "600px",
       "top": "400px",
+      "isObstacle": false
+    },
+    {
+      "id": "1729881920000",
+      "src": "https://img.craftpix.net/2021/08/Free-Pixel-Art-Mushroom-Sprite-Pack.png",
+      "left": "900px",
+      "top": "200px",
+      "isObstacle": false
+    },
+    {
+      "id": "1729881930000",
+      "src": "https://img.craftpix.net/2025/03/Free-Pixel-Art-Dungeon-Objects-Asset-Pack7.jpg",
+      "left": "1300px",
+      "top": "500px",
       "isObstacle": true
-    },
-    {
-      "src": "https://i.imgur.com/yG2xG1N.png",
-      "left": "700px",
-      "top": "100px",
-      "isObstacle": false
-    },
-    {
-      "src": "https://i.imgur.com/A6j1jU1.png",
-      "left": "300px",
-      "top": "600px",
-      "isObstacle": false
-    },
-    {
-      "src": "https://i.imgur.com/bX6l6q8.png",
-      "left": "1100px",
-      "top": "50px",
-      "isObstacle": false
     }
   ],
   "terrainColor": "#556B2F",

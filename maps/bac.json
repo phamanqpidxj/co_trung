@@ -1,27 +1,31 @@
 {
   "objects": [
     {
-      "src": "https://i.imgur.com/3Yd3jY9.png",
+      "id": "1729881800000",
+      "src": "https://img.craftpix.net/2024/09/Free-Mountain-Peak-Pixel-Art-Backgrounds3.jpg",
       "left": "150px",
-      "top": "200px",
+      "top": "100px",
       "isObstacle": true
     },
     {
-      "src": "https://i.imgur.com/3Yd3jY9.png",
-      "left": "1100px",
+      "id": "1729881810000",
+      "src": "https://img.craftpix.net/2024/09/Free-Mountain-Peak-Pixel-Art-Backgrounds4.jpg",
+      "left": "800px",
+      "top": "50px",
+      "isObstacle": false
+    },
+    {
+      "id": "1729881820000",
+      "src": "https://img.craftpix.net/2021/02/Free-Pixel-Art-Forest-Items-Pack.png",
+      "left": "400px",
       "top": "500px",
       "isObstacle": true
     },
     {
-      "src": "https://i.imgur.com/pDRm4h2.png",
-      "left": "450px",
-      "top": "400px",
-      "isObstacle": false
-    },
-    {
-      "src": "https://i.imgur.com/2X3f5g5.png",
-      "left": "0px",
-      "top": "0px",
+      "id": "1729881830000",
+      "src": "https://img.craftpix.net/2024/09/Free-Mountain-Peak-Pixel-Art-Backgrounds2.jpg",
+      "left": "1100px",
+      "top": "300px",
       "isObstacle": false
     }
   ],
