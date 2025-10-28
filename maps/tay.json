@@ -1,33 +1,31 @@
 {
   "objects": [
     {
-      "src": "https://i.imgur.com/k4z0f8S.png",
-      "left": "200px",
-      "top": "300px",
+      "id": "1729881700000",
+      "src": "https://img.craftpix.net/2024/08/Free-Desert-Oasis-Pixel-Art-Background-Pack3.jpg",
+      "left": "50px",
+      "top": "50px",
       "isObstacle": false
     },
     {
-      "src": "https://i.imgur.com/k4z0f8S.png",
+      "id": "1729881710000",
+      "src": "https://img.craftpix.net/2024/08/Free-Desert-Oasis-Pixel-Art-Background-Pack2.jpg",
+      "left": "700px",
+      "top": "150px",
+      "isObstacle": false
+    },
+    {
+      "id": "1729881720000",
+      "src": "https://img.craftpix.net/2021/08/Free-Pixel-Art-Cactus-Sprite-Pack.png",
+      "left": "300px",
+      "top": "400px",
+      "isObstacle": true
+    },
+    {
+      "id": "1729881730000",
+      "src": "https://img.craftpix.net/2024/08/Free-Desert-Oasis-Pixel-Art-Background-Pack4.jpg",
       "left": "1000px",
-      "top": "500px",
-      "isObstacle": false
-    },
-    {
-      "src": "https://i.imgur.com/5O5v1sC.png",
-      "left": "400px",
-      "top": "100px",
-      "isObstacle": true
-    },
-    {
-      "src": "https://i.imgur.com/5O5v1sC.png",
-      "left": "800px",
-      "top": "600px",
-      "isObstacle": true
-    },
-    {
-      "src": "https://i.imgur.com/O6zJ5jE.png",
-      "left": "600px",
-      "top": "350px",
+      "top": "450px",
       "isObstacle": true
     }
   ],
