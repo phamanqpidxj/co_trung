@@ -406,7 +406,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 localStorage.setItem('mapLayout', JSON.stringify(mapLayout));
             }
-            alert('Bản đồ đã được lưu!');
         }
 
         function loadMap(mapLayout) {
@@ -424,21 +423,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function setEmbedContent(container, htmlContent) {
             container.innerHTML = '';
-            if (!htmlContent) { container.style.display = 'none'; return; }
+            if (!htmlContent) {
+                container.style.display = 'none';
+                return;
+            }
             container.style.display = 'block';
-            const template = document.createElement('template');
-            template.innerHTML = htmlContent;
-            Array.from(template.content.childNodes).forEach(node => {
-                if (node.nodeName === 'SCRIPT') {
-                    const script = document.createElement('script');
-                    script.src = node.src;
-                    script.async = true;
-                    if(node.hasAttribute('data-video-id')) script.setAttribute('data-video-id', node.getAttribute('data-video-id'));
-                    document.body.appendChild(script);
-                } else {
-                    container.appendChild(node.cloneNode(true));
-                }
-            });
+            container.innerHTML = htmlContent;
         }
 
         function loadMapFromLocalStorage() {

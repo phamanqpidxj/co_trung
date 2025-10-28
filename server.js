@@ -82,6 +82,10 @@ io.on('connection', (socket) => {
 
         const oldZone = player.zone;
 
+        if (!zoneLayout[oldZone] || !Object.values(zoneLayout[oldZone]).includes(newZone)) {
+            console.log(`Invalid zone transition attempt from ${oldZone} to ${newZone} by ${player.id}`);
+            return;
+        }
 
         // Leave old zone and notify players
         socket.leave(oldZone);
@@ -140,7 +144,7 @@ io.on('connection', (socket) => {
                 if (err) console.error(`Failed to save map file for ${zone}:`, err);
                 else console.log(`Map layout for ${zone} saved successfully.`);
             });
-            io.in(zone).emit('load map', mapLayouts[zone]);
+            io.in(zone).emit('load map', { map: mapLayouts[zone], zone: zone });
         }
     });
 
