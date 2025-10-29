@@ -134,9 +134,28 @@ button:hover {
 
 .map-object {
     position: absolute;
-    max-width: 100px; /* Example size */
-    height: auto;
+    width: 100px; /* Default size, will be overridden by inline styles */
+    height: 100px;
+    object-fit: fill; /* Ensure the image fills the dimensions */
 }
+
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: rgba(0, 0, 255, 0.7);
+    border: 1px solid white;
+    z-index: 30; /* Make sure handles are on top */
+}
+
+.resize-handle.top-left { top: -5px; left: -5px; cursor: nwse-resize; }
+.resize-handle.top-right { top: -5px; right: -5px; cursor: nesw-resize; }
+.resize-handle.bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.resize-handle.bottom-right { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.resize-handle.top-center { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.resize-handle.bottom-center { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.resize-handle.middle-left { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
+.resize-handle.middle-right { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
 
 #game-ui, #slide-menu, #chat-container {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));

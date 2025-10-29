@@ -357,9 +357,19 @@ document.addEventListener('DOMContentLoaded', () => {
             img.className = 'map-object';
             img.style.left = data.left;
             img.style.top = data.top;
+            img.style.width = data.width || '100px'; // Default width
+            img.style.height = data.height || '100px'; // Default height
             img.dataset.id = data.id || Date.now(); // Assign or generate a unique ID
             gameContainer.appendChild(img);
-            const objectData = { id: img.dataset.id, src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
+            const objectData = {
+                id: img.dataset.id,
+                src: data.src,
+                left: data.left,
+                top: data.top,
+                width: img.style.width,
+                height: img.style.height,
+                isObstacle: data.isObstacle || false
+            };
             mapObjects.push({ element: img, data: objectData });
             if (role === 'admin' || role === 'moderator') makeDraggable(img);
         }
@@ -388,26 +398,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function selectObject(element) {
+            if (selectedObject === element) return;
+            deselectObject(); // Deselect any currently selected object
+
             selectedObject = element;
+            selectedObject.style.border = '2px solid blue';
+
             const selectedObjectTools = document.getElementById('selected-object-tools');
             selectedObjectTools.style.display = 'block';
+
             const objectData = mapObjects.find(obj => obj.element === element)?.data;
             const isObstacleCheckbox = document.getElementById('is-obstacle-checkbox');
             if (objectData) isObstacleCheckbox.checked = objectData.isObstacle || false;
             isObstacleCheckbox.onchange = () => { if (objectData) objectData.isObstacle = isObstacleCheckbox.checked; };
-            document.querySelectorAll('.map-object').forEach(obj => obj.style.border = 'none');
-            element.style.border = '2px solid blue';
+
+            // Create and append resize handles
+            const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'];
+            handles.forEach(handleClass => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${handleClass}`;
+                element.appendChild(handle);
+                handle.addEventListener('mousedown', (e) => {
+                    e.stopPropagation(); // Prevent triggering object drag
+                    initResize(e, element, handleClass);
+                });
+            });
         }
 
         function deselectObject() {
-            if (selectedObject) selectedObject.style.border = 'none';
+            if (selectedObject) {
+                selectedObject.style.border = 'none';
+                // Remove all resize handles
+                const handles = selectedObject.querySelectorAll('.resize-handle');
+                handles.forEach(handle => handle.remove());
+            }
             selectedObject = null;
             document.getElementById('selected-object-tools').style.display = 'none';
         }
 
         function saveMap() {
             const mapLayout = {
-                objects: mapObjects.map(obj => ({ src: obj.element.src, left: obj.element.style.left, top: obj.element.style.top, isObstacle: obj.data.isObstacle || false })),
+                objects: mapObjects.map(obj => ({
+                    src: obj.element.src,
+                    left: obj.element.style.left,
+                    top: obj.element.style.top,
+                    width: obj.element.style.width,
+                    height: obj.element.style.height,
+                    isObstacle: obj.data.isObstacle || false
+                })),
                 terrainColor: gameContainer.style.backgroundColor,
                 embedCode: document.getElementById('embed-code-input').value
             };
@@ -507,6 +545,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatInput.value = '';
             }
         });
+
+        function initResize(e, element, handleClass) {
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startWidth = parseInt(document.defaultView.getComputedStyle(element).width, 10);
+            const startHeight = parseInt(document.defaultView.getComputedStyle(element).height, 10);
+            const startLeft = element.offsetLeft;
+            const startTop = element.offsetTop;
+
+            const doResize = (moveEvent) => {
+                let newWidth = startWidth;
+                let newHeight = startHeight;
+                let newLeft = startLeft;
+                let newTop = startTop;
+                const dx = moveEvent.clientX - startX;
+                const dy = moveEvent.clientY - startY;
+
+                if (handleClass.includes('right')) {
+                    newWidth = startWidth + dx;
+                }
+                if (handleClass.includes('left')) {
+                    newWidth = startWidth - dx;
+                    newLeft = startLeft + dx;
+                }
+                if (handleClass.includes('bottom')) {
+                    newHeight = startHeight + dy;
+                }
+                if (handleClass.includes('top')) {
+                    newHeight = startHeight - dy;
+                    newTop = startTop + dy;
+                }
+
+                if (newWidth > 10) { // Minimum size
+                    element.style.width = `${newWidth}px`;
+                    element.style.left = `${newLeft}px`;
+                }
+                if (newHeight > 10) { // Minimum size
+                    element.style.height = `${newHeight}px`;
+                    element.style.top = `${newTop}px`;
+                }
+            };
+
+            const stopResize = () => {
+                document.removeEventListener('mousemove', doResize, false);
+                document.removeEventListener('mouseup', stopResize, false);
+            };
+
+            document.addEventListener('mousemove', doResize, false);
+            document.addEventListener('mouseup', stopResize, false);
+        }
+
         gameLoop();
     }
 });
