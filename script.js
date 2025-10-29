@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 document.getElementById('chat-container').style.display = 'flex';
                 if (role === 'admin' || role === 'moderator') {
-                    document.getElementById('game-ui').classList.add('menu-open');
+                    // Menu is now a slide-out, opened by button. No longer open by default.
                     if (role === 'moderator') {
                         const adminTools = document.getElementById('admin-tools');
                         adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
@@ -450,12 +450,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
 
         const gameUi = document.getElementById('game-ui');
+        const slideMenu = document.getElementById('slide-menu');
         makeDraggable(gameUi);
+        makeDraggable(slideMenu); // Also make the slide menu draggable
+
         document.getElementById('menu-button').addEventListener('click', () => {
-            gameUi.classList.toggle('menu-open');
+            slideMenu.classList.toggle('open');
         });
 
-        gameContainer.addEventListener('click', deselectObject);
+        gameContainer.addEventListener('click', (e) => {
+            // Close the menu if clicking outside of it and the main UI
+            if (!slideMenu.contains(e.target) && !gameUi.contains(e.target)) {
+                slideMenu.classList.remove('open');
+            }
+            deselectObject();
+        });
         if (role === 'admin' || role === 'moderator') {
             document.getElementById('terrain-color-input').addEventListener('input', (e) => { gameContainer.style.backgroundColor = e.target.value; });
             document.getElementById('add-object-input').addEventListener('change', (e) => {
