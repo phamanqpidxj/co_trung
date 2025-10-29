@@ -17,38 +17,46 @@
         </div>
 
         <div id="slide-menu">
-            <div id="admin-tools">
-                <h3 class="drag-handle">Công cụ Admin</h3>
+            <h3 class="drag-handle">Menu</h3>
+
+            <details class="menu-group">
+                <summary>Công cụ Đối tượng</summary>
                 <div>
                     <label for="add-object-input">Thêm đối tượng:</label>
                     <input type="file" id="add-object-input" accept="image/*">
                 </div>
-                <div>
-                    <label for="terrain-color-input">Màu địa hình:</label>
-                    <input type="color" id="terrain-color-input">
-                </div>
-                <hr>
                 <div id="selected-object-tools" style="display: none;">
-                    <h4>Thuộc tính đối tượng</h4>
+                    <hr>
+                    <p><strong>Đối tượng được chọn</strong></p>
                     <div>
                         <input type="checkbox" id="is-obstacle-checkbox">
                         <label for="is-obstacle-checkbox">Là vật cản</label>
                     </div>
                     <button id="delete-object-button">Xóa đối tượng</button>
                 </div>
-                <hr>
+            </details>
+
+            <details class="menu-group">
+                <summary>Công cụ Bản đồ</summary>
                 <div>
-                    <h4>Nội dung nhúng</h4>
+                    <label for="terrain-color-input">Màu địa hình:</label>
+                    <input type="color" id="terrain-color-input">
+                </div>
+                <button id="save-map-button">Lưu bản đồ</button>
+            </details>
+
+            <details class="menu-group">
+                <summary>Nội dung Nhúng</summary>
+                <div>
                     <textarea id="embed-code-input" rows="4" style="width: 100%;"></textarea>
                     <button id="delete-embed-button">Xóa nội dung nhúng</button>
                 </div>
-                <button id="save-map-button">Lưu bản đồ</button>
-            </div>
+            </details>
 
-            <div id="member-list-container">
-                <h4 class="drag-handle">Thành viên</h4>
+            <details class="menu-group" id="member-list-group">
+                <summary>Thành viên</summary>
                 <ul id="member-list"></ul>
-            </div>
+            </details>
         </div>
 
         <div id="embed-container" style="display: none;"></div>

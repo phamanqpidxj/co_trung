@@ -121,12 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 document.getElementById('chat-container').style.display = 'flex';
                 if (role === 'admin' || role === 'moderator') {
-                    // Menu is now a slide-out, opened by button. No longer open by default.
+                    document.getElementById('slide-menu').style.display = 'block'; // Show the menu container
                     if (role === 'moderator') {
-                        const adminTools = document.getElementById('admin-tools');
-                        adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
-                        adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
-                        adminTools.querySelector('button#delete-embed-button').style.display = 'none';
+                        // Hide admin-only features for moderators
+                        const embedGroup = document.querySelector('#slide-menu details:nth-of-type(3)');
+                        if(embedGroup) embedGroup.style.display = 'none';
                     }
                 }
                 socket.emit('new player', { name: characterName, image: characterImage, role: role, x: x, y: y });
@@ -357,31 +356,31 @@ document.addEventListener('DOMContentLoaded', () => {
             img.className = 'map-object';
             img.style.left = data.left;
             img.style.top = data.top;
-            img.style.width = data.width || '100px'; // Default width
-            img.style.height = data.height || '100px'; // Default height
             img.dataset.id = data.id || Date.now(); // Assign or generate a unique ID
             gameContainer.appendChild(img);
-            const objectData = {
-                id: img.dataset.id,
-                src: data.src,
-                left: data.left,
-                top: data.top,
-                width: img.style.width,
-                height: img.style.height,
-                isObstacle: data.isObstacle || false
-            };
+            const objectData = { id: img.dataset.id, src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
             mapObjects.push({ element: img, data: objectData });
             if (role === 'admin' || role === 'moderator') makeDraggable(img);
         }
 
-        function makeDraggable(element) {
+        function makeDraggable(element, onDragStart) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             const handle = element.querySelector('.drag-handle') || element;
+
             handle.onmousedown = (e) => {
                 e.preventDefault();
                 pos3 = e.clientX;
                 pos4 = e.clientY;
-                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+
+                if (onDragStart) {
+                    onDragStart();
+                }
+
+                document.onmouseup = () => {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                };
+
                 document.onmousemove = (ev) => {
                     ev.preventDefault();
                     pos1 = pos3 - ev.clientX;
@@ -392,60 +391,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     element.style.left = `${element.offsetLeft - pos1}px`;
                 };
             };
+
             if (element.classList.contains('map-object')) {
                 element.addEventListener('click', (e) => { e.stopPropagation(); selectObject(element); });
             }
         }
 
         function selectObject(element) {
-            if (selectedObject === element) return;
-            deselectObject(); // Deselect any currently selected object
-
             selectedObject = element;
-            selectedObject.style.border = '2px solid blue';
-
             const selectedObjectTools = document.getElementById('selected-object-tools');
             selectedObjectTools.style.display = 'block';
-
             const objectData = mapObjects.find(obj => obj.element === element)?.data;
             const isObstacleCheckbox = document.getElementById('is-obstacle-checkbox');
             if (objectData) isObstacleCheckbox.checked = objectData.isObstacle || false;
             isObstacleCheckbox.onchange = () => { if (objectData) objectData.isObstacle = isObstacleCheckbox.checked; };
-
-            // Create and append resize handles
-            const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'];
-            handles.forEach(handleClass => {
-                const handle = document.createElement('div');
-                handle.className = `resize-handle ${handleClass}`;
-                element.appendChild(handle);
-                handle.addEventListener('mousedown', (e) => {
-                    e.stopPropagation(); // Prevent triggering object drag
-                    initResize(e, element, handleClass);
-                });
-            });
+            document.querySelectorAll('.map-object').forEach(obj => obj.style.border = 'none');
+            element.style.border = '2px solid blue';
         }
 
         function deselectObject() {
-            if (selectedObject) {
-                selectedObject.style.border = 'none';
-                // Remove all resize handles
-                const handles = selectedObject.querySelectorAll('.resize-handle');
-                handles.forEach(handle => handle.remove());
-            }
+            if (selectedObject) selectedObject.style.border = 'none';
             selectedObject = null;
             document.getElementById('selected-object-tools').style.display = 'none';
         }
 
         function saveMap() {
             const mapLayout = {
-                objects: mapObjects.map(obj => ({
-                    src: obj.element.src,
-                    left: obj.element.style.left,
-                    top: obj.element.style.top,
-                    width: obj.element.style.width,
-                    height: obj.element.style.height,
-                    isObstacle: obj.data.isObstacle || false
-                })),
+                objects: mapObjects.map(obj => ({ src: obj.element.src, left: obj.element.style.left, top: obj.element.style.top, isObstacle: obj.data.isObstacle || false })),
                 terrainColor: gameContainer.style.backgroundColor,
                 embedCode: document.getElementById('embed-code-input').value
             };
@@ -489,20 +461,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const gameUi = document.getElementById('game-ui');
         const slideMenu = document.getElementById('slide-menu');
-        makeDraggable(gameUi);
-        makeDraggable(slideMenu); // Also make the slide menu draggable
 
-        document.getElementById('menu-button').addEventListener('click', () => {
+        makeDraggable(gameUi);
+        makeDraggable(slideMenu, () => {
+            // Close the menu when dragging starts
+            slideMenu.classList.remove('open');
+        });
+
+        document.getElementById('menu-button').addEventListener('click', (e) => {
+            e.stopPropagation();
             slideMenu.classList.toggle('open');
         });
 
-        gameContainer.addEventListener('click', (e) => {
-            // Close the menu if clicking outside of it and the main UI
-            if (!slideMenu.contains(e.target) && !gameUi.contains(e.target)) {
+        // Close menu if clicking outside of it
+        document.addEventListener('click', (e) => {
+            if (slideMenu.classList.contains('open') && !slideMenu.contains(e.target) && e.target.id !== 'menu-button') {
                 slideMenu.classList.remove('open');
             }
-            deselectObject();
         });
+
+        gameContainer.addEventListener('click', deselectObject);
         if (role === 'admin' || role === 'moderator') {
             document.getElementById('terrain-color-input').addEventListener('input', (e) => { gameContainer.style.backgroundColor = e.target.value; });
             document.getElementById('add-object-input').addEventListener('change', (e) => {
@@ -545,57 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 chatInput.value = '';
             }
         });
-
-        function initResize(e, element, handleClass) {
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startWidth = parseInt(document.defaultView.getComputedStyle(element).width, 10);
-            const startHeight = parseInt(document.defaultView.getComputedStyle(element).height, 10);
-            const startLeft = element.offsetLeft;
-            const startTop = element.offsetTop;
-
-            const doResize = (moveEvent) => {
-                let newWidth = startWidth;
-                let newHeight = startHeight;
-                let newLeft = startLeft;
-                let newTop = startTop;
-                const dx = moveEvent.clientX - startX;
-                const dy = moveEvent.clientY - startY;
-
-                if (handleClass.includes('right')) {
-                    newWidth = startWidth + dx;
-                }
-                if (handleClass.includes('left')) {
-                    newWidth = startWidth - dx;
-                    newLeft = startLeft + dx;
-                }
-                if (handleClass.includes('bottom')) {
-                    newHeight = startHeight + dy;
-                }
-                if (handleClass.includes('top')) {
-                    newHeight = startHeight - dy;
-                    newTop = startTop + dy;
-                }
-
-                if (newWidth > 10) { // Minimum size
-                    element.style.width = `${newWidth}px`;
-                    element.style.left = `${newLeft}px`;
-                }
-                if (newHeight > 10) { // Minimum size
-                    element.style.height = `${newHeight}px`;
-                    element.style.top = `${newTop}px`;
-                }
-            };
-
-            const stopResize = () => {
-                document.removeEventListener('mousemove', doResize, false);
-                document.removeEventListener('mouseup', stopResize, false);
-            };
-
-            document.addEventListener('mousemove', doResize, false);
-            document.addEventListener('mouseup', stopResize, false);
-        }
-
         gameLoop();
     }
 });

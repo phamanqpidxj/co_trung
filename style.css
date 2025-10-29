@@ -134,28 +134,9 @@ button:hover {
 
 .map-object {
     position: absolute;
-    width: 100px; /* Default size, will be overridden by inline styles */
-    height: 100px;
-    object-fit: fill; /* Ensure the image fills the dimensions */
+    max-width: 100px; /* Example size */
+    height: auto;
 }
-
-.resize-handle {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    background-color: rgba(0, 0, 255, 0.7);
-    border: 1px solid white;
-    z-index: 30; /* Make sure handles are on top */
-}
-
-.resize-handle.top-left { top: -5px; left: -5px; cursor: nwse-resize; }
-.resize-handle.top-right { top: -5px; right: -5px; cursor: nesw-resize; }
-.resize-handle.bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
-.resize-handle.bottom-right { bottom: -5px; right: -5px; cursor: nwse-resize; }
-.resize-handle.top-center { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-.resize-handle.bottom-center { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
-.resize-handle.middle-left { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
-.resize-handle.middle-right { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
 
 #game-ui, #slide-menu, #chat-container {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
@@ -167,6 +148,7 @@ button:hover {
     padding: 1rem;
     position: absolute;
     z-index: 10;
+    box-sizing: border-box;
 }
 
 #game-ui {
@@ -177,22 +159,36 @@ button:hover {
 
 #slide-menu {
     top: 90px;
-    left: -300px; /* Hidden off-screen */
-    width: 250px;
-    transition: left 0.5s ease;
+    left: -320px; /* Start off-screen */
+    width: 300px;
+    transition: left 0.3s ease-in-out;
+    display: none; /* Hide until menu button is clicked */
 }
 
 #slide-menu.open {
-    left: 20px; /* Slides into view */
+    display: block;
+    left: 20px;
 }
 
-#admin-tools {
-    margin-bottom: 20px; /* Add some space between sections */
+.menu-group summary {
+    cursor: pointer;
+    font-weight: bold;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    margin-top: 10px;
 }
 
-#member-list-container {
-    width: 100%; /* Make it full-width within the UI panel */
-    box-sizing: border-box;
+.menu-group summary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.menu-group div, .menu-group ul {
+    padding: 0.5rem;
+}
+
+.menu-group button {
+    margin-top: 10px;
 }
 
 #member-list {
