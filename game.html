@@ -13,50 +13,47 @@
                 <p><strong>Nhân vật:</strong> <span id="ui-character-name"></span></p>
                 <p><strong>Trạng thái:</strong> <span id="connection-status">Đang kết nối...</span></p>
             </div>
-            <button id="menu-button">Menu</button>
-        </div>
-
-        <div id="slide-menu">
-            <h3 class="drag-handle">Menu</h3>
-
-            <details class="menu-group">
-                <summary>Công cụ Đối tượng</summary>
-                <div>
-                    <label for="add-object-input">Thêm đối tượng:</label>
-                    <input type="file" id="add-object-input" accept="image/*">
-                </div>
-                <div id="selected-object-tools" style="display: none;">
-                    <hr>
-                    <p><strong>Đối tượng được chọn</strong></p>
+            <button id="menu-button">☰</button>
+            <div class="menu-content">
+                <details class="menu-group">
+                    <summary>Công cụ Đối tượng</summary>
                     <div>
-                        <input type="checkbox" id="is-obstacle-checkbox">
-                        <label for="is-obstacle-checkbox">Là vật cản</label>
+                        <label for="add-object-input">Thêm đối tượng:</label>
+                        <input type="file" id="add-object-input" accept="image/*">
                     </div>
-                    <button id="delete-object-button">Xóa đối tượng</button>
-                </div>
-            </details>
+                    <div id="selected-object-tools" style="display: none;">
+                        <hr>
+                        <p><strong>Đối tượng được chọn</strong></p>
+                        <div>
+                            <input type="checkbox" id="is-obstacle-checkbox">
+                            <label for="is-obstacle-checkbox">Là vật cản</label>
+                        </div>
+                        <button id="delete-object-button">Xóa đối tượng</button>
+                    </div>
+                </details>
 
-            <details class="menu-group">
-                <summary>Công cụ Bản đồ</summary>
-                <div>
-                    <label for="terrain-color-input">Màu địa hình:</label>
-                    <input type="color" id="terrain-color-input">
-                </div>
-                <button id="save-map-button">Lưu bản đồ</button>
-            </details>
+                <details class="menu-group">
+                    <summary>Công cụ Bản đồ</summary>
+                    <div>
+                        <label for="terrain-color-input">Màu địa hình:</label>
+                        <input type="color" id="terrain-color-input">
+                    </div>
+                    <button id="save-map-button">Lưu bản đồ</button>
+                </details>
 
-            <details class="menu-group">
-                <summary>Nội dung Nhúng</summary>
-                <div>
-                    <textarea id="embed-code-input" rows="4" style="width: 100%;"></textarea>
-                    <button id="delete-embed-button">Xóa nội dung nhúng</button>
-                </div>
-            </details>
+                <details class="menu-group">
+                    <summary>Nội dung Nhúng</summary>
+                    <div>
+                        <textarea id="embed-code-input" rows="4" style="width: 100%;"></textarea>
+                        <button id="delete-embed-button">Xóa nội dung nhúng</button>
+                    </div>
+                </details>
 
-            <details class="menu-group" id="member-list-group">
-                <summary>Thành viên</summary>
-                <ul id="member-list"></ul>
-            </details>
+                <details class="menu-group" id="member-list-group">
+                    <summary>Thành viên</summary>
+                    <ul id="member-list"></ul>
+                </details>
+            </div>
         </div>
 
         <div id="embed-container" style="display: none;"></div>
