@@ -415,7 +415,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function selectObject(element) {
-            // First, deselect any previously selected object to remove its handles
             deselectObject();
 
             selectedObject = element;
@@ -426,14 +425,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const objectData = mapObjects.find(obj => obj.element === element)?.data;
             const isObstacleCheckbox = document.getElementById('is-obstacle-checkbox');
+            const widthInput = document.getElementById('object-width');
+            const heightInput = document.getElementById('object-height');
+
             if (objectData) {
                 isObstacleCheckbox.checked = objectData.isObstacle || false;
+                widthInput.value = selectedObject.style.width || `${selectedObject.clientWidth}px`;
+                heightInput.value = selectedObject.style.height || `${selectedObject.clientHeight}px`;
             }
+
             isObstacleCheckbox.onchange = () => {
                 if (objectData) objectData.isObstacle = isObstacleCheckbox.checked;
             };
 
-            // Create and append resize handles
             const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'];
             handles.forEach(handleClass => {
                 const handle = document.createElement('div');
@@ -446,13 +450,13 @@ document.addEventListener('DOMContentLoaded', () => {
         function deselectObject() {
             if (selectedObject) {
                 selectedObject.classList.remove('selected');
-                // Remove all resize handles
                 const handles = selectedObject.querySelectorAll('.resize-handle');
                 handles.forEach(handle => handle.remove());
             }
             selectedObject = null;
             document.getElementById('selected-object-tools').style.display = 'none';
         }
+        window.selectObject = selectObject; // Expose for testing
 
         let initialRect, initialMouseX, initialMouseY, currentHandle;
 
@@ -482,8 +486,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let newWidth = initialRect.width;
             let newHeight = initialRect.height;
-            let newLeft = selectedObject.offsetLeft;
-            let newTop = selectedObject.offsetTop;
+            let newLeft = initialRect.left;
+            let newTop = initialRect.top;
 
             if (currentHandle.includes('right')) {
                 newWidth = initialRect.width + dx;
@@ -499,14 +503,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 newTop = initialRect.top + dy;
             }
 
-            // Prevent negative dimensions
             if (newWidth > 10) {
                  selectedObject.style.width = `${newWidth}px`;
                  selectedObject.style.left = `${newLeft}px`;
+                 document.getElementById('object-width').value = `${Math.round(newWidth)}px`;
             }
             if (newHeight > 10) {
                 selectedObject.style.height = `${newHeight}px`;
                 selectedObject.style.top = `${newTop}px`;
+                document.getElementById('object-height').value = `${Math.round(newHeight)}px`;
             }
         }
 
@@ -522,7 +527,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     objectData.left = selectedObject.style.left;
                     objectData.top = selectedObject.style.top;
 
-                    // Emit an event to the server to update other clients
                     if (socket && socket.connected) {
                         socket.emit('object updated', {
                             id: objectData.id,
