@@ -489,6 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let newLeft = initialRect.left;
             let newTop = initialRect.top;
 
+            // Calculate new dimensions and positions based on the handle being dragged
             if (currentHandle.includes('right')) {
                 newWidth = initialRect.width + dx;
             } else if (currentHandle.includes('left')) {
@@ -503,16 +504,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 newTop = initialRect.top + dy;
             }
 
-            if (newWidth > 10) {
-                 selectedObject.style.width = `${newWidth}px`;
-                 selectedObject.style.left = `${newLeft}px`;
-                 document.getElementById('object-width').value = `${Math.round(newWidth)}px`;
+            // Enforce minimum size and adjust position to keep the opposite edge stationary
+            if (newWidth <= 10) {
+                newWidth = 10;
+                if (currentHandle.includes('left')) {
+                    // Keep the right edge fixed
+                    newLeft = initialRect.left + initialRect.width - 10;
+                }
             }
-            if (newHeight > 10) {
-                selectedObject.style.height = `${newHeight}px`;
-                selectedObject.style.top = `${newTop}px`;
-                document.getElementById('object-height').value = `${Math.round(newHeight)}px`;
+
+            if (newHeight <= 10) {
+                newHeight = 10;
+                if (currentHandle.includes('top')) {
+                    // Keep the bottom edge fixed
+                    newTop = initialRect.top + initialRect.height - 10;
+                }
             }
+
+            // Apply the final calculated styles
+            selectedObject.style.width = `${newWidth}px`;
+            selectedObject.style.left = `${newLeft}px`;
+            selectedObject.style.height = `${newHeight}px`;
+            selectedObject.style.top = `${newTop}px`;
+
+            // Update the dimension display in the UI
+            document.getElementById('object-width').value = `${Math.round(newWidth)}px`;
+            document.getElementById('object-height').value = `${Math.round(newHeight)}px`;
         }
 
         function stopResize() {
