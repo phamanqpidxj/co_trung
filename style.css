@@ -189,19 +189,34 @@ button:hover {
     top: 20px;
     left: 20px;
     width: 250px;
+    display: flex;
+    flex-direction: column;
 }
 
-#slide-menu {
-    top: 90px;
-    left: -320px; /* Start off-screen */
-    width: 300px;
-    transition: left 0.3s ease-in-out;
-    display: none; /* Hide until menu button is clicked */
+#game-ui.menu-open .menu-content {
+    max-height: 500px; /* Adjust as needed to fit content */
+    opacity: 1;
+    padding-top: 1rem;
 }
 
-#slide-menu.open {
-    display: block;
-    left: 20px;
+#menu-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 1.5rem;
+    line-height: 40px;
+    text-align: center;
+}
+
+.menu-content {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out, padding-top 0.4s ease-in-out;
+    padding-top: 0;
 }
 
 .menu-group summary {

@@ -590,6 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const gameUi = document.getElementById('game-ui');
         makeDraggable(gameUi);
+
+        // Add click listener to the menu button to toggle the '.menu-open' class
         document.getElementById('menu-button').addEventListener('click', () => {
             gameUi.classList.toggle('menu-open');
         });
