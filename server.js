@@ -139,6 +139,25 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('object updated', (data) => {
+        const player = players[socket.id];
+        if (player && (player.role === 'admin' || player.role === 'moderator')) {
+            const zone = player.zone;
+            // Also update the server's map layout in memory
+            if (mapLayouts[zone] && mapLayouts[zone].objects) {
+                const objIndex = mapLayouts[zone].objects.findIndex(o => o.id === data.id);
+                if (objIndex !== -1) {
+                    mapLayouts[zone].objects[objIndex].width = data.width;
+                    mapLayouts[zone].objects[objIndex].height = data.height;
+                    mapLayouts[zone].objects[objIndex].left = data.left;
+                    mapLayouts[zone].objects[objIndex].top = data.top;
+                }
+            }
+            // Broadcast to other clients in the same zone
+            socket.to(zone).emit('object updated', data);
+        }
+    });
+
     socket.on('chat message', (message) => {
         if (players[socket.id]) {
             io.in(players[socket.id].zone).emit('chat message', {
