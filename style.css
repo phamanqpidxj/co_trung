@@ -134,9 +134,43 @@ button:hover {
 
 .map-object {
     position: absolute;
-    max-width: 100px; /* Example size */
     height: auto;
+    /* Default size for newly added objects before resizing */
+    width: 100px;
 }
+
+/* Style for the selected object */
+.map-object.selected {
+    border: 2px solid #007bff; /* A distinct blue border */
+    position: relative; /* Needed for positioning resize handles */
+}
+
+/* Base style for resize handles */
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #007bff;
+    border: 1px solid white;
+    border-radius: 50%;
+    z-index: 10;
+    display: none; /* Hidden by default */
+}
+
+.map-object.selected .resize-handle {
+    display: block; /* Show handles only on selected objects */
+}
+
+/* Positioning each handle */
+.resize-handle.top-left { top: -5px; left: -5px; cursor: nwse-resize; }
+.resize-handle.top-right { top: -5px; right: -5px; cursor: nesw-resize; }
+.resize-handle.bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.resize-handle.bottom-right { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.resize-handle.top-center { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.resize-handle.bottom-center { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.resize-handle.middle-left { top: 50%; left: -5px; transform: translateY(-50%); cursor: ew-resize; }
+.resize-handle.middle-right { top: 50%; right: -5px; transform: translateY(-50%); cursor: ew-resize; }
+
 
 #game-ui, #slide-menu, #chat-container {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));

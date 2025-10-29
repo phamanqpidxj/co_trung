@@ -121,11 +121,12 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 document.getElementById('chat-container').style.display = 'flex';
                 if (role === 'admin' || role === 'moderator') {
-                    document.getElementById('slide-menu').style.display = 'block'; // Show the menu container
+                    document.getElementById('game-ui').classList.add('menu-open');
                     if (role === 'moderator') {
-                        // Hide admin-only features for moderators
-                        const embedGroup = document.querySelector('#slide-menu details:nth-of-type(3)');
-                        if(embedGroup) embedGroup.style.display = 'none';
+                        const adminTools = document.getElementById('admin-tools');
+                        adminTools.querySelector('h4:nth-of-type(2)').style.display = 'none';
+                        adminTools.querySelector('textarea#embed-code-input').style.display = 'none';
+                        adminTools.querySelector('button#delete-embed-button').style.display = 'none';
                     }
                 }
                 socket.emit('new player', { name: characterName, image: characterImage, role: role, x: x, y: y });
@@ -204,6 +205,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     chatLog.appendChild(messageElement);
                     chatLog.scrollTop = chatLog.scrollHeight;
                     if (players[data.id]) showChatBubble(players[data.id], data.name, data.message);
+                });
+
+                socket.on('object updated', (data) => {
+                    const objectToUpdate = mapObjects.find(obj => obj.data.id === data.id);
+                    if (objectToUpdate && objectToUpdate.element) {
+                        const el = objectToUpdate.element;
+                        el.style.width = data.width;
+                        el.style.height = data.height;
+                        el.style.left = data.left;
+                        el.style.top = data.top;
+                        // Also update the local data array to stay in sync
+                        objectToUpdate.data.width = data.width;
+                        objectToUpdate.data.height = data.height;
+                        objectToUpdate.data.left = data.left;
+                        objectToUpdate.data.top = data.top;
+                    }
                 });
             } catch (error) {
                 console.error("Error in setupOnlineMode:", error);
@@ -356,31 +373,32 @@ document.addEventListener('DOMContentLoaded', () => {
             img.className = 'map-object';
             img.style.left = data.left;
             img.style.top = data.top;
+            // Apply width and height if they exist in the data
+            if (data.width) img.style.width = data.width;
+            if (data.height) img.style.height = data.height;
             img.dataset.id = data.id || Date.now(); // Assign or generate a unique ID
             gameContainer.appendChild(img);
-            const objectData = { id: img.dataset.id, src: data.src, left: data.left, top: data.top, isObstacle: data.isObstacle || false };
+            const objectData = {
+                id: img.dataset.id,
+                src: data.src,
+                left: data.left,
+                top: data.top,
+                width: img.style.width,
+                height: img.style.height,
+                isObstacle: data.isObstacle || false
+            };
             mapObjects.push({ element: img, data: objectData });
             if (role === 'admin' || role === 'moderator') makeDraggable(img);
         }
 
-        function makeDraggable(element, onDragStart) {
+        function makeDraggable(element) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             const handle = element.querySelector('.drag-handle') || element;
-
             handle.onmousedown = (e) => {
                 e.preventDefault();
                 pos3 = e.clientX;
                 pos4 = e.clientY;
-
-                if (onDragStart) {
-                    onDragStart();
-                }
-
-                document.onmouseup = () => {
-                    document.onmouseup = null;
-                    document.onmousemove = null;
-                };
-
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
                 document.onmousemove = (ev) => {
                     ev.preventDefault();
                     pos1 = pos3 - ev.clientX;
@@ -391,33 +409,144 @@ document.addEventListener('DOMContentLoaded', () => {
                     element.style.left = `${element.offsetLeft - pos1}px`;
                 };
             };
-
             if (element.classList.contains('map-object')) {
                 element.addEventListener('click', (e) => { e.stopPropagation(); selectObject(element); });
             }
         }
 
         function selectObject(element) {
+            // First, deselect any previously selected object to remove its handles
+            deselectObject();
+
             selectedObject = element;
+            selectedObject.classList.add('selected');
+
             const selectedObjectTools = document.getElementById('selected-object-tools');
             selectedObjectTools.style.display = 'block';
+
             const objectData = mapObjects.find(obj => obj.element === element)?.data;
             const isObstacleCheckbox = document.getElementById('is-obstacle-checkbox');
-            if (objectData) isObstacleCheckbox.checked = objectData.isObstacle || false;
-            isObstacleCheckbox.onchange = () => { if (objectData) objectData.isObstacle = isObstacleCheckbox.checked; };
-            document.querySelectorAll('.map-object').forEach(obj => obj.style.border = 'none');
-            element.style.border = '2px solid blue';
+            if (objectData) {
+                isObstacleCheckbox.checked = objectData.isObstacle || false;
+            }
+            isObstacleCheckbox.onchange = () => {
+                if (objectData) objectData.isObstacle = isObstacleCheckbox.checked;
+            };
+
+            // Create and append resize handles
+            const handles = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'middle-left', 'middle-right'];
+            handles.forEach(handleClass => {
+                const handle = document.createElement('div');
+                handle.className = `resize-handle ${handleClass}`;
+                selectedObject.appendChild(handle);
+                handle.addEventListener('mousedown', (e) => startResize(e, handleClass));
+            });
         }
 
         function deselectObject() {
-            if (selectedObject) selectedObject.style.border = 'none';
+            if (selectedObject) {
+                selectedObject.classList.remove('selected');
+                // Remove all resize handles
+                const handles = selectedObject.querySelectorAll('.resize-handle');
+                handles.forEach(handle => handle.remove());
+            }
             selectedObject = null;
             document.getElementById('selected-object-tools').style.display = 'none';
         }
 
+        let initialRect, initialMouseX, initialMouseY, currentHandle;
+
+        function startResize(e, handleClass) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            initialRect = selectedObject.getBoundingClientRect();
+            const gameRect = gameContainer.getBoundingClientRect();
+            // Adjust for game container's position if it's not at (0,0)
+            initialRect.x -= gameRect.x;
+            initialRect.y -= gameRect.y;
+
+            initialMouseX = e.clientX;
+            initialMouseY = e.clientY;
+            currentHandle = handleClass;
+
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+        }
+
+        function resize(e) {
+            if (!selectedObject) return;
+
+            const dx = e.clientX - initialMouseX;
+            const dy = e.clientY - initialMouseY;
+
+            let newWidth = initialRect.width;
+            let newHeight = initialRect.height;
+            let newLeft = selectedObject.offsetLeft;
+            let newTop = selectedObject.offsetTop;
+
+            if (currentHandle.includes('right')) {
+                newWidth = initialRect.width + dx;
+            } else if (currentHandle.includes('left')) {
+                newWidth = initialRect.width - dx;
+                newLeft = initialRect.left + dx;
+            }
+
+            if (currentHandle.includes('bottom')) {
+                newHeight = initialRect.height + dy;
+            } else if (currentHandle.includes('top')) {
+                newHeight = initialRect.height - dy;
+                newTop = initialRect.top + dy;
+            }
+
+            // Prevent negative dimensions
+            if (newWidth > 10) {
+                 selectedObject.style.width = `${newWidth}px`;
+                 selectedObject.style.left = `${newLeft}px`;
+            }
+            if (newHeight > 10) {
+                selectedObject.style.height = `${newHeight}px`;
+                selectedObject.style.top = `${newTop}px`;
+            }
+        }
+
+        function stopResize() {
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+
+            if (selectedObject) {
+                const objectData = mapObjects.find(obj => obj.element === selectedObject)?.data;
+                if (objectData) {
+                    objectData.width = selectedObject.style.width;
+                    objectData.height = selectedObject.style.height;
+                    objectData.left = selectedObject.style.left;
+                    objectData.top = selectedObject.style.top;
+
+                    // Emit an event to the server to update other clients
+                    if (socket && socket.connected) {
+                        socket.emit('object updated', {
+                            id: objectData.id,
+                            width: objectData.width,
+                            height: objectData.height,
+                            left: objectData.left,
+                            top: objectData.top
+                        });
+                    }
+                }
+            }
+        }
+
         function saveMap() {
             const mapLayout = {
-                objects: mapObjects.map(obj => ({ src: obj.element.src, left: obj.element.style.left, top: obj.element.style.top, isObstacle: obj.data.isObstacle || false })),
+                objects: mapObjects.map(obj => ({
+                    id: obj.data.id, // Ensure ID is saved
+                    src: obj.element.src,
+                    left: obj.element.style.left,
+                    top: obj.element.style.top,
+                    width: obj.element.style.width,
+                    height: obj.element.style.height,
+                    isObstacle: obj.data.isObstacle || false
+                })),
                 terrainColor: gameContainer.style.backgroundColor,
                 embedCode: document.getElementById('embed-code-input').value
             };
@@ -460,24 +589,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('keyup', (e) => { if (e.key in keys) keys[e.key] = false; });
 
         const gameUi = document.getElementById('game-ui');
-        const slideMenu = document.getElementById('slide-menu');
-
         makeDraggable(gameUi);
-        makeDraggable(slideMenu, () => {
-            // Close the menu when dragging starts
-            slideMenu.classList.remove('open');
-        });
-
-        document.getElementById('menu-button').addEventListener('click', (e) => {
-            e.stopPropagation();
-            slideMenu.classList.toggle('open');
-        });
-
-        // Close menu if clicking outside of it
-        document.addEventListener('click', (e) => {
-            if (slideMenu.classList.contains('open') && !slideMenu.contains(e.target) && e.target.id !== 'menu-button') {
-                slideMenu.classList.remove('open');
-            }
+        document.getElementById('menu-button').addEventListener('click', () => {
+            gameUi.classList.toggle('menu-open');
         });
 
         gameContainer.addEventListener('click', deselectObject);
